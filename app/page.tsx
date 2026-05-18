@@ -11,6 +11,30 @@ type Thought = {
   status: string | null;
 };
 
+type Mode =
+  | "general"
+  | "creative-desk"
+  | "linkedin-lead"
+  | "substack-note"
+  | "vertical-campaign";
+
+const modePrompts: Record<Mode, string> = {
+  general:
+    "Respond as Alfred, Joash's editorial and growth chief of staff. Be calm, clear, useful and commercially aware.",
+
+  "creative-desk":
+    "Turn the user's thought into a Creative Desk content idea. Suggest whether it should become Tuesday Builder’s Brief, Thursday Lab Notes, or Sunday Strategic Reset. Then create a strong title, angle, outline, Substack CTA, LinkedIn teaser, Substack Note and visual brief.",
+
+  "linkedin-lead":
+    "Create a modern, punchy, effective LinkedIn lead-generation post for Mediahubink. Use British English. Make it commercially sharp, direct and specific. Structure it with a strong hook, pain point, numbers or business impact, mechanism, clear CTA, and a pinned comment.",
+
+  "substack-note":
+    "Create a short Substack Note from the user's thought. Make it thoughtful, concise, calm and worth replying to. Include one sharp idea, one short reflection, and a soft invitation to read or subscribe.",
+
+  "vertical-campaign":
+    "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused.",
+};
+
 export default function HomePage() {
   const [prompt, setPrompt] = useState("");
   const [reply, setReply] = useState("");
@@ -19,13 +43,25 @@ export default function HomePage() {
   const [saveMessage, setSaveMessage] = useState("");
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [loadingThoughts, setLoadingThoughts] = useState(false);
+  const [mode, setMode] = useState<Mode>("general");
 
-  async function askAlfred() {
+  async function askAlfred(selectedMode: Mode = mode) {
     if (!prompt.trim()) return;
 
     setLoading(true);
     setReply("");
     setSaveMessage("");
+
+    const fullPrompt = `
+Mode:
+${selectedMode}
+
+Instruction:
+${modePrompts[selectedMode]}
+
+User thought/topic:
+${prompt}
+`;
 
     try {
       const response = await fetch("/api/alfred", {
@@ -33,7 +69,7 @@ export default function HomePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: fullPrompt }),
       });
 
       const data = await response.json();
@@ -100,6 +136,11 @@ export default function HomePage() {
     }
   }
 
+  function setModeAndAsk(selectedMode: Mode) {
+    setMode(selectedMode);
+    askAlfred(selectedMode);
+  }
+
   return (
     <main className="page">
       <div className="shell">
@@ -143,12 +184,62 @@ export default function HomePage() {
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: A dentist asked if AI will replace reception staff. Turn this into a LinkedIn post and a Creative Desk idea."
+              placeholder="Example: A dentist asked if AI will replace reception staff."
             />
 
+            <div className="mode-grid">
+              <button
+                className="mode"
+                onClick={() => setMode("creative-desk")}
+              >
+                <strong>Creative Desk Post</strong>
+                <span>Builder’s Brief, Lab Notes or Strategic Reset.</span>
+              </button>
+
+              <button
+                className="mode"
+                onClick={() => setMode("linkedin-lead")}
+              >
+                <strong>LinkedIn Lead Post</strong>
+                <span>Punchy Mediahubink post with CTA and pinned comment.</span>
+              </button>
+
+              <button
+                className="mode"
+                onClick={() => setMode("substack-note")}
+              >
+                <strong>Substack Note</strong>
+                <span>Short, thoughtful post for Substack Notes.</span>
+              </button>
+
+              <button
+                className="mode"
+                onClick={() => setMode("vertical-campaign")}
+              >
+                <strong>Vertical Campaign</strong>
+                <span>5-post campaign for one target industry.</span>
+              </button>
+            </div>
+
             <div className="actions" style={{ marginTop: "16px" }}>
-              <button className="btn" onClick={askAlfred} disabled={loading}>
+              <button className="btn" onClick={() => askAlfred()} disabled={loading}>
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => setModeAndAsk("creative-desk")}
+                disabled={loading}
+              >
+                Creative Desk
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => setModeAndAsk("linkedin-lead")}
+                disabled={loading}
+              >
+                LinkedIn
               </button>
 
               <button
@@ -159,6 +250,10 @@ export default function HomePage() {
                 {saving ? "Saving..." : "Save Thought"}
               </button>
             </div>
+
+            <p style={{ color: "#a3a3a3", marginTop: "14px", fontSize: "14px" }}>
+              Current mode: {mode}
+            </p>
 
             {saveMessage && (
               <div className="mode" style={{ marginTop: "16px" }}>
