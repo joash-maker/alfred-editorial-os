@@ -2,12 +2,23 @@
 
 import { useState } from "react";
 
+type Thought = {
+  id: string;
+  created_at: string;
+  title: string | null;
+  category: string | null;
+  content: string;
+  status: string | null;
+};
+
 export default function HomePage() {
   const [prompt, setPrompt] = useState("");
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [thoughts, setThoughts] = useState<Thought[]>([]);
+  const [loadingThoughts, setLoadingThoughts] = useState(false);
 
   async function askAlfred() {
     if (!prompt.trim()) return;
@@ -26,7 +37,6 @@ export default function HomePage() {
       });
 
       const data = await response.json();
-
       setReply(data.reply || data.error || "No response from Alfred.");
     } catch {
       setReply("Something went wrong. Check the API route or Vercel logs.");
@@ -62,10 +72,31 @@ export default function HomePage() {
       }
 
       setSaveMessage("Saved to Alfred’s memory.");
+      loadThoughts();
     } catch {
       setSaveMessage("Something went wrong while saving.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function loadThoughts() {
+    setLoadingThoughts(true);
+
+    try {
+      const response = await fetch("/api/thoughts/list");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setSaveMessage(data.error || "Could not load memory.");
+        return;
+      }
+
+      setThoughts(data.thoughts || []);
+    } catch {
+      setSaveMessage("Something went wrong loading memory.");
+    } finally {
+      setLoadingThoughts(false);
     }
   }
 
@@ -99,8 +130,8 @@ export default function HomePage() {
               <a className="btn" href="#quick-create">
                 Open Quick Create
               </a>
-              <a className="btn btn-secondary" href="#modules">
-                View Modules
+              <a className="btn btn-secondary" href="#memory">
+                View Memory
               </a>
             </div>
           </div>
@@ -145,75 +176,53 @@ export default function HomePage() {
                 <span>{reply}</span>
               </div>
             )}
-
-            <div className="mode-grid">
-              <div className="mode">
-                <strong>The Creative Desk</strong>
-                <span>
-                  Builder’s Brief, Lab Notes, Strategic Reset, Substack Notes
-                  and reflective long-form content.
-                </span>
-              </div>
-
-              <div className="mode">
-                <strong>Mediahubink Growth</strong>
-                <span>
-                  LinkedIn lead posts, vertical campaigns, pinned comments,
-                  CTAs, demos and client conversations.
-                </span>
-              </div>
-            </div>
           </div>
         </section>
 
         <section className="section" id="modules">
           <div className="mini-card">
             <h3>Editorial Engine</h3>
-            <p>
-              Create Tuesday, Thursday and Sunday posts using your saved
-              frameworks, tone and archive memory.
-            </p>
+            <p>Create Tuesday, Thursday and Sunday posts using your frameworks.</p>
           </div>
 
           <div className="mini-card">
             <h3>LinkedIn Growth Engine</h3>
-            <p>
-              Generate punchy vertical-specific posts for dentists, trades,
-              schools, gyms, serviced offices and more.
-            </p>
+            <p>Generate vertical-specific posts, pinned comments and CTAs.</p>
           </div>
 
           <div className="mini-card">
             <h3>CRM-lite</h3>
-            <p>
-              Track leads, prospects, demo interest, follow-ups and content
-              that creates real conversations.
-            </p>
+            <p>Track prospects, demo interest and follow-ups.</p>
+          </div>
+        </section>
+
+        <section className="card" id="memory" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Alfred’s Memory</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadThoughts}
+              disabled={loadingThoughts}
+            >
+              {loadingThoughts ? "Loading..." : "Refresh Memory"}
+            </button>
           </div>
 
-          <div className="mini-card">
-            <h3>Thought Vault</h3>
-            <p>
-              Store what you are building, testing, learning, noticing and
-              wrestling with.
+          {thoughts.length === 0 ? (
+            <p className="lead" style={{ fontSize: "16px" }}>
+              No thoughts loaded yet. Save a thought, then refresh memory.
             </p>
-          </div>
-
-          <div className="mini-card">
-            <h3>Demo Manager</h3>
-            <p>
-              Keep each vertical demo link organised so Alfred always suggests
-              the right CTA.
-            </p>
-          </div>
-
-          <div className="mini-card">
-            <h3>Offer Engine</h3>
-            <p>
-              Connect posts to Fredi, voice agents, AI receptionists, advisory
-              work and partner offers.
-            </p>
-          </div>
+          ) : (
+            <div className="mode-grid">
+              {thoughts.map((thought) => (
+                <div className="mode" key={thought.id}>
+                  <strong>{thought.title || "Untitled thought"}</strong>
+                  <span>{thought.content}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
