@@ -6,12 +6,15 @@ export default function HomePage() {
   const [prompt, setPrompt] = useState("");
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   async function askAlfred() {
     if (!prompt.trim()) return;
 
     setLoading(true);
     setReply("");
+    setSaveMessage("");
 
     try {
       const response = await fetch("/api/alfred", {
@@ -29,6 +32,40 @@ export default function HomePage() {
       setReply("Something went wrong. Check the API route or Vercel logs.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveThought() {
+    if (!prompt.trim()) return;
+
+    setSaving(true);
+    setSaveMessage("");
+
+    try {
+      const response = await fetch("/api/thoughts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: prompt,
+          category: "Thought Vault",
+          title: prompt.slice(0, 80),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setSaveMessage(data.error || "Could not save thought.");
+        return;
+      }
+
+      setSaveMessage("Saved to Alfred’s memory.");
+    } catch {
+      setSaveMessage("Something went wrong while saving.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -82,10 +119,28 @@ export default function HomePage() {
               <button className="btn" onClick={askAlfred} disabled={loading}>
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
               </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={saveThought}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save Thought"}
+              </button>
             </div>
 
+            {saveMessage && (
+              <div className="mode" style={{ marginTop: "16px" }}>
+                <strong>Memory:</strong>
+                <span>{saveMessage}</span>
+              </div>
+            )}
+
             {reply && (
-              <div className="mode" style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}>
+              <div
+                className="mode"
+                style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}
+              >
                 <strong>Alfred says:</strong>
                 <span>{reply}</span>
               </div>
