@@ -39,6 +39,22 @@ type Knowledge = {
   status: string | null;
 };
 
+type Lead = {
+  id: string;
+  created_at: string;
+  name: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  industry: string | null;
+  source: string | null;
+  interest: string | null;
+  stage: string | null;
+  notes: string | null;
+  follow_up_date: string | null;
+  estimated_value: number | null;
+};
+
 type Mode =
   | "general"
   | "creative-desk"
@@ -82,6 +98,10 @@ export default function HomePage() {
   const [loadingKnowledge, setLoadingKnowledge] = useState(false);
   const [knowledgeMessage, setKnowledgeMessage] = useState("");
 
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [leadMessage, setLeadMessage] = useState("");
+
   async function askAlfred(selectedMode: Mode = mode) {
     if (!prompt.trim()) return;
 
@@ -118,6 +138,20 @@ export default function HomePage() {
             .join("\n")
         : "No knowledge loaded.";
 
+    const leadContext =
+      leads.length > 0
+        ? leads
+            .map(
+              (lead) =>
+                `${lead.company || lead.name || "Unnamed lead"} | ${
+                  lead.industry || "No industry"
+                } | ${lead.interest || "No interest"} | Stage: ${
+                  lead.stage || "new"
+                }`
+            )
+            .join("\n")
+        : "No leads loaded.";
+
     const fullPrompt = `
 Mode:
 ${selectedMode}
@@ -133,6 +167,9 @@ ${demoContext}
 
 Current Mediahubink offers:
 ${offerContext}
+
+Current CRM-lite leads:
+${leadContext}
 
 User thought/topic:
 ${prompt}
@@ -266,6 +303,28 @@ ${prompt}
     }
   }
 
+  async function loadLeads() {
+    setLoadingLeads(true);
+    setLeadMessage("");
+
+    try {
+      const response = await fetch("/api/leads/list");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLeadMessage(data.error || "Could not load leads.");
+        return;
+      }
+
+      setLeads(data.leads || []);
+      setLeadMessage("Leads loaded.");
+    } catch {
+      setLeadMessage("Something went wrong loading leads.");
+    } finally {
+      setLoadingLeads(false);
+    }
+  }
+
   function setModeAndAsk(selectedMode: Mode) {
     setMode(selectedMode);
     askAlfred(selectedMode);
@@ -306,6 +365,9 @@ ${prompt}
               </a>
               <a className="btn btn-secondary" href="#business">
                 View Demos
+              </a>
+              <a className="btn btn-secondary" href="#crm">
+                View CRM
               </a>
               <a className="btn btn-secondary" href="#memory">
                 View Memory
@@ -349,7 +411,11 @@ ${prompt}
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
-              <button className="btn" onClick={() => askAlfred()} disabled={loading}>
+              <button
+                className="btn"
+                onClick={() => askAlfred()}
+                disabled={loading}
+              >
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
               </button>
 
@@ -378,7 +444,13 @@ ${prompt}
               </button>
             </div>
 
-            <p style={{ color: "#a3a3a3", marginTop: "14px", fontSize: "14px" }}>
+            <p
+              style={{
+                color: "#a3a3a3",
+                marginTop: "14px",
+                fontSize: "14px",
+              }}
+            >
               Current mode: {mode}
             </p>
 
@@ -404,7 +476,9 @@ ${prompt}
         <section className="section" id="modules">
           <div className="mini-card">
             <h3>Editorial Engine</h3>
-            <p>Create Tuesday, Thursday and Sunday posts using your frameworks.</p>
+            <p>
+              Create Tuesday, Thursday and Sunday posts using your frameworks.
+            </p>
           </div>
 
           <div className="mini-card">
@@ -489,7 +563,10 @@ ${prompt}
 
             <div className="mini-card">
               <h3>Use In Prompts</h3>
-              <p>Loaded demos and offers are passed to Alfred when generating posts.</p>
+              <p>
+                Loaded demos and offers are passed to Alfred when generating
+                posts.
+              </p>
             </div>
           </div>
 
@@ -532,58 +609,60 @@ ${prompt}
             </>
           )}
         </section>
-<section className="card" id="crm" style={{ marginTop: "28px" }}>
-  <div className="panel-title">CRM-lite</div>
 
-  <div className="actions" style={{ marginBottom: "18px" }}>
-    <button
-      className="btn btn-secondary"
-      onClick={loadLeads}
-      disabled={loadingLeads}
-    >
-      {loadingLeads ? "Loading..." : "Load Leads"}
-    </button>
-  </div>
+        <section className="card" id="crm" style={{ marginTop: "28px" }}>
+          <div className="panel-title">CRM-lite</div>
 
-  {leadMessage && (
-    <div className="mode" style={{ marginBottom: "18px" }}>
-      <strong>Status:</strong>
-      <span>{leadMessage}</span>
-    </div>
-  )}
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadLeads}
+              disabled={loadingLeads}
+            >
+              {loadingLeads ? "Loading..." : "Load Leads"}
+            </button>
+          </div>
 
-  <div className="section" style={{ marginTop: "0" }}>
-    <div className="mini-card">
-      <h3>Leads Loaded</h3>
-      <p>{leads.length}</p>
-    </div>
+          {leadMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{leadMessage}</span>
+            </div>
+          )}
 
-    <div className="mini-card">
-      <h3>Purpose</h3>
-      <p>Track prospects, demo interest and follow-up conversations.</p>
-    </div>
+          <div className="section" style={{ marginTop: "0" }}>
+            <div className="mini-card">
+              <h3>Leads Loaded</h3>
+              <p>{leads.length}</p>
+            </div>
 
-    <div className="mini-card">
-      <h3>Next Upgrade</h3>
-      <p>Add leads directly from Alfred’s dashboard.</p>
-    </div>
-  </div>
+            <div className="mini-card">
+              <h3>Purpose</h3>
+              <p>Track prospects, demo interest and follow-up conversations.</p>
+            </div>
 
-  {leads.length > 0 && (
-    <div className="mode-grid" style={{ marginTop: "18px" }}>
-      {leads.map((lead) => (
-        <div className="mode" key={lead.id}>
-          <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
-          <span>Contact: {lead.name || "Not added"}</span>
-          <span>Industry: {lead.industry || "Not added"}</span>
-          <span>Interest: {lead.interest || "Not added"}</span>
-          <span>Stage: {lead.stage || "new"}</span>
-          <span>{lead.notes || ""}</span>
-        </div>
-      ))}
-    </div>
-  )}
-</section>
+            <div className="mini-card">
+              <h3>Next Upgrade</h3>
+              <p>Add leads directly from Alfred’s dashboard.</p>
+            </div>
+          </div>
+
+          {leads.length > 0 && (
+            <div className="mode-grid" style={{ marginTop: "18px" }}>
+              {leads.map((lead) => (
+                <div className="mode" key={lead.id}>
+                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                  <span>Contact: {lead.name || "Not added"}</span>
+                  <span>Industry: {lead.industry || "Not added"}</span>
+                  <span>Interest: {lead.interest || "Not added"}</span>
+                  <span>Stage: {lead.stage || "new"}</span>
+                  <span>{lead.notes || ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="card" id="memory" style={{ marginTop: "28px" }}>
           <div className="panel-title">Alfred’s Memory</div>
 
