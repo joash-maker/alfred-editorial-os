@@ -30,6 +30,15 @@ type Offer = {
   status: string | null;
 };
 
+type Knowledge = {
+  id: string;
+  category: string;
+  title: string;
+  content: string;
+  source: string | null;
+  status: string | null;
+};
+
 type Mode =
   | "general"
   | "creative-desk"
@@ -69,6 +78,10 @@ export default function HomePage() {
   const [loadingBusinessData, setLoadingBusinessData] = useState(false);
   const [businessMessage, setBusinessMessage] = useState("");
 
+  const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
+  const [loadingKnowledge, setLoadingKnowledge] = useState(false);
+  const [knowledgeMessage, setKnowledgeMessage] = useState("");
+
   async function askAlfred(selectedMode: Mode = mode) {
     if (!prompt.trim()) return;
 
@@ -79,16 +92,31 @@ export default function HomePage() {
     const demoContext =
       demos.length > 0
         ? demos
-            .map((demo) => `${demo.vertical}: ${demo.demo_url} | CTA: ${demo.cta || ""}`)
+            .map(
+              (demo) =>
+                `${demo.vertical}: ${demo.demo_url} | CTA: ${demo.cta || ""}`
+            )
             .join("\n")
         : "No demo links loaded.";
 
     const offerContext =
       offers.length > 0
         ? offers
-            .map((offer) => `${offer.name}: ${offer.price || ""} | ${offer.description || ""}`)
+            .map(
+              (offer) =>
+                `${offer.name}: ${offer.price || ""} | ${
+                  offer.description || ""
+                }`
+            )
             .join("\n")
         : "No offers loaded.";
+
+    const knowledgeContext =
+      knowledge.length > 0
+        ? knowledge
+            .map((item) => `${item.category} - ${item.title}: ${item.content}`)
+            .join("\n")
+        : "No knowledge loaded.";
 
     const fullPrompt = `
 Mode:
@@ -96,6 +124,9 @@ ${selectedMode}
 
 Instruction:
 ${modePrompts[selectedMode]}
+
+Permanent Alfred Knowledge:
+${knowledgeContext}
 
 Current Mediahubink demo links:
 ${demoContext}
@@ -213,6 +244,28 @@ ${prompt}
     }
   }
 
+  async function loadKnowledge() {
+    setLoadingKnowledge(true);
+    setKnowledgeMessage("");
+
+    try {
+      const response = await fetch("/api/knowledge/list");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setKnowledgeMessage(data.error || "Could not load knowledge.");
+        return;
+      }
+
+      setKnowledge(data.knowledge || []);
+      setKnowledgeMessage("Knowledge Vault loaded.");
+    } catch {
+      setKnowledgeMessage("Something went wrong loading knowledge.");
+    } finally {
+      setLoadingKnowledge(false);
+    }
+  }
+
   function setModeAndAsk(selectedMode: Mode) {
     setMode(selectedMode);
     askAlfred(selectedMode);
@@ -245,9 +298,18 @@ ${prompt}
             </p>
 
             <div className="actions">
-              <a className="btn" href="#quick-create">Open Quick Create</a>
-              <a className="btn btn-secondary" href="#business">View Demos</a>
-              <a className="btn btn-secondary" href="#memory">View Memory</a>
+              <a className="btn" href="#quick-create">
+                Open Quick Create
+              </a>
+              <a className="btn btn-secondary" href="#knowledge">
+                View Knowledge
+              </a>
+              <a className="btn btn-secondary" href="#business">
+                View Demos
+              </a>
+              <a className="btn btn-secondary" href="#memory">
+                View Memory
+              </a>
             </div>
           </div>
 
@@ -277,7 +339,10 @@ ${prompt}
                 <span>Short, thoughtful post for Substack Notes.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("vertical-campaign")}>
+              <button
+                className="mode"
+                onClick={() => setMode("vertical-campaign")}
+              >
                 <strong>Vertical Campaign</strong>
                 <span>5-post campaign for one target industry.</span>
               </button>
@@ -351,6 +416,44 @@ ${prompt}
             <h3>CRM-lite</h3>
             <p>Track prospects, demo interest and follow-ups.</p>
           </div>
+        </section>
+
+        <section className="card" id="knowledge" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Knowledge Vault</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadKnowledge}
+              disabled={loadingKnowledge}
+            >
+              {loadingKnowledge ? "Loading..." : "Load Knowledge"}
+            </button>
+          </div>
+
+          {knowledgeMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{knowledgeMessage}</span>
+            </div>
+          )}
+
+          {knowledge.length === 0 ? (
+            <p className="lead" style={{ fontSize: "16px" }}>
+              No knowledge loaded yet.
+            </p>
+          ) : (
+            <div className="mode-grid">
+              {knowledge.map((item) => (
+                <div className="mode" key={item.id}>
+                  <strong>
+                    {item.category}: {item.title}
+                  </strong>
+                  <span>{item.content}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="card" id="business" style={{ marginTop: "28px" }}>
