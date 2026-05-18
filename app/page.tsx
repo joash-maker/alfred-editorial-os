@@ -101,6 +101,16 @@ export default function HomePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadMessage, setLeadMessage] = useState("");
+  const [savingLead, setSavingLead] = useState(false);
+
+  const [leadName, setLeadName] = useState("");
+  const [leadCompany, setLeadCompany] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadPhone, setLeadPhone] = useState("");
+  const [leadIndustry, setLeadIndustry] = useState("");
+  const [leadInterest, setLeadInterest] = useState("");
+  const [leadStage, setLeadStage] = useState("new");
+  const [leadNotes, setLeadNotes] = useState("");
 
   async function askAlfred(selectedMode: Mode = mode) {
     if (!prompt.trim()) return;
@@ -325,6 +335,53 @@ ${prompt}
     }
   }
 
+  async function saveLead() {
+    setSavingLead(true);
+    setLeadMessage("");
+
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: leadName,
+          company: leadCompany,
+          email: leadEmail,
+          phone: leadPhone,
+          industry: leadIndustry,
+          source: "alfred-dashboard",
+          interest: leadInterest,
+          stage: leadStage,
+          notes: leadNotes,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLeadMessage(data.error || "Could not save lead.");
+        return;
+      }
+
+      setLeadMessage("Lead saved.");
+      setLeadName("");
+      setLeadCompany("");
+      setLeadEmail("");
+      setLeadPhone("");
+      setLeadIndustry("");
+      setLeadInterest("");
+      setLeadStage("new");
+      setLeadNotes("");
+      loadLeads();
+    } catch {
+      setLeadMessage("Something went wrong saving the lead.");
+    } finally {
+      setSavingLead(false);
+    }
+  }
+
   function setModeAndAsk(selectedMode: Mode) {
     setMode(selectedMode);
     askAlfred(selectedMode);
@@ -473,6 +530,140 @@ ${prompt}
           </div>
         </section>
 
+        <section className="card" id="crm" style={{ marginTop: "28px" }}>
+          <div className="panel-title">CRM-lite</div>
+
+          <div className="mode-grid">
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadName}
+              onChange={(e) => setLeadName(e.target.value)}
+              placeholder="Contact name"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadCompany}
+              onChange={(e) => setLeadCompany(e.target.value)}
+              placeholder="Company"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadEmail}
+              onChange={(e) => setLeadEmail(e.target.value)}
+              placeholder="Email"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadPhone}
+              onChange={(e) => setLeadPhone(e.target.value)}
+              placeholder="Phone"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadIndustry}
+              onChange={(e) => setLeadIndustry(e.target.value)}
+              placeholder="Industry"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadInterest}
+              onChange={(e) => setLeadInterest(e.target.value)}
+              placeholder="Interest, e.g. Fredi, voice agent, demo"
+            />
+
+            <select
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadStage}
+              onChange={(e) => setLeadStage(e.target.value)}
+            >
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="demo-interest">Demo Interest</option>
+              <option value="proposal">Proposal</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+
+            <textarea
+              className="input-box"
+              value={leadNotes}
+              onChange={(e) => setLeadNotes(e.target.value)}
+              placeholder="Notes"
+            />
+          </div>
+
+          <div className="actions" style={{ marginTop: "18px" }}>
+            <button
+              className="btn"
+              onClick={saveLead}
+              disabled={savingLead}
+            >
+              {savingLead ? "Saving lead..." : "Save Lead"}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={loadLeads}
+              disabled={loadingLeads}
+            >
+              {loadingLeads ? "Loading..." : "Load Leads"}
+            </button>
+          </div>
+
+          {leadMessage && (
+            <div className="mode" style={{ marginTop: "18px" }}>
+              <strong>Status:</strong>
+              <span>{leadMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "18px" }}>
+            <div className="mini-card">
+              <h3>Leads Loaded</h3>
+              <p>{leads.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Purpose</h3>
+              <p>Track prospects, demo interest and follow-up conversations.</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Next Upgrade</h3>
+              <p>Add follow-up dates and Alfred reminders.</p>
+            </div>
+          </div>
+
+          {leads.length > 0 && (
+            <div className="mode-grid" style={{ marginTop: "18px" }}>
+              {leads.map((lead) => (
+                <div className="mode" key={lead.id}>
+                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                  <span>Contact: {lead.name || "Not added"}</span>
+                  <span>Email: {lead.email || "Not added"}</span>
+                  <span>Phone: {lead.phone || "Not added"}</span>
+                  <span>Industry: {lead.industry || "Not added"}</span>
+                  <span>Interest: {lead.interest || "Not added"}</span>
+                  <span>Stage: {lead.stage || "new"}</span>
+                  <span>{lead.notes || ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="section" id="modules">
           <div className="mini-card">
             <h3>Editorial Engine</h3>
@@ -607,59 +798,6 @@ ${prompt}
                 ))}
               </div>
             </>
-          )}
-        </section>
-
-        <section className="card" id="crm" style={{ marginTop: "28px" }}>
-          <div className="panel-title">CRM-lite</div>
-
-          <div className="actions" style={{ marginBottom: "18px" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={loadLeads}
-              disabled={loadingLeads}
-            >
-              {loadingLeads ? "Loading..." : "Load Leads"}
-            </button>
-          </div>
-
-          {leadMessage && (
-            <div className="mode" style={{ marginBottom: "18px" }}>
-              <strong>Status:</strong>
-              <span>{leadMessage}</span>
-            </div>
-          )}
-
-          <div className="section" style={{ marginTop: "0" }}>
-            <div className="mini-card">
-              <h3>Leads Loaded</h3>
-              <p>{leads.length}</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Purpose</h3>
-              <p>Track prospects, demo interest and follow-up conversations.</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Next Upgrade</h3>
-              <p>Add leads directly from Alfred’s dashboard.</p>
-            </div>
-          </div>
-
-          {leads.length > 0 && (
-            <div className="mode-grid" style={{ marginTop: "18px" }}>
-              {leads.map((lead) => (
-                <div className="mode" key={lead.id}>
-                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
-                  <span>Contact: {lead.name || "Not added"}</span>
-                  <span>Industry: {lead.industry || "Not added"}</span>
-                  <span>Interest: {lead.interest || "Not added"}</span>
-                  <span>Stage: {lead.stage || "new"}</span>
-                  <span>{lead.notes || ""}</span>
-                </div>
-              ))}
-            </div>
           )}
         </section>
 
