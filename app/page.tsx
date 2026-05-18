@@ -1,4 +1,37 @@
+"use client";
+
+import { useState } from "react";
+
 export default function HomePage() {
+  const [prompt, setPrompt] = useState("");
+  const [reply, setReply] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function askAlfred() {
+    if (!prompt.trim()) return;
+
+    setLoading(true);
+    setReply("");
+
+    try {
+      const response = await fetch("/api/alfred", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await response.json();
+
+      setReply(data.reply || data.error || "No response from Alfred.");
+    } catch {
+      setReply("Something went wrong. Check the API route or Vercel logs.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="page">
       <div className="shell">
@@ -40,8 +73,23 @@ export default function HomePage() {
 
             <textarea
               className="input-box"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
               placeholder="Example: A dentist asked if AI will replace reception staff. Turn this into a LinkedIn post and a Creative Desk idea."
             />
+
+            <div className="actions" style={{ marginTop: "16px" }}>
+              <button className="btn" onClick={askAlfred} disabled={loading}>
+                {loading ? "Alfred is thinking..." : "Ask Alfred"}
+              </button>
+            </div>
+
+            {reply && (
+              <div className="mode" style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}>
+                <strong>Alfred says:</strong>
+                <span>{reply}</span>
+              </div>
+            )}
 
             <div className="mode-grid">
               <div className="mode">
