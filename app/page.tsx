@@ -11,6 +11,25 @@ type Thought = {
   status: string | null;
 };
 
+type Demo = {
+  id: string;
+  vertical: string;
+  demo_url: string;
+  cta: string | null;
+  notes: string | null;
+  status: string | null;
+};
+
+type Offer = {
+  id: string;
+  name: string;
+  offer_type: string | null;
+  description: string | null;
+  price: string | null;
+  cta: string | null;
+  status: string | null;
+};
+
 type Mode =
   | "general"
   | "creative-desk"
@@ -45,6 +64,11 @@ export default function HomePage() {
   const [loadingThoughts, setLoadingThoughts] = useState(false);
   const [mode, setMode] = useState<Mode>("general");
 
+  const [demos, setDemos] = useState<Demo[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loadingBusinessData, setLoadingBusinessData] = useState(false);
+  const [businessMessage, setBusinessMessage] = useState("");
+
   async function askAlfred(selectedMode: Mode = mode) {
     if (!prompt.trim()) return;
 
@@ -52,12 +76,32 @@ export default function HomePage() {
     setReply("");
     setSaveMessage("");
 
+    const demoContext =
+      demos.length > 0
+        ? demos
+            .map((demo) => `${demo.vertical}: ${demo.demo_url} | CTA: ${demo.cta || ""}`)
+            .join("\n")
+        : "No demo links loaded.";
+
+    const offerContext =
+      offers.length > 0
+        ? offers
+            .map((offer) => `${offer.name}: ${offer.price || ""} | ${offer.description || ""}`)
+            .join("\n")
+        : "No offers loaded.";
+
     const fullPrompt = `
 Mode:
 ${selectedMode}
 
 Instruction:
 ${modePrompts[selectedMode]}
+
+Current Mediahubink demo links:
+${demoContext}
+
+Current Mediahubink offers:
+${offerContext}
 
 User thought/topic:
 ${prompt}
@@ -136,6 +180,39 @@ ${prompt}
     }
   }
 
+  async function loadBusinessData() {
+    setLoadingBusinessData(true);
+    setBusinessMessage("");
+
+    try {
+      const [demoResponse, offerResponse] = await Promise.all([
+        fetch("/api/demos/list"),
+        fetch("/api/offers/list"),
+      ]);
+
+      const demoData = await demoResponse.json();
+      const offerData = await offerResponse.json();
+
+      if (!demoResponse.ok) {
+        setBusinessMessage(demoData.error || "Could not load demos.");
+        return;
+      }
+
+      if (!offerResponse.ok) {
+        setBusinessMessage(offerData.error || "Could not load offers.");
+        return;
+      }
+
+      setDemos(demoData.demos || []);
+      setOffers(offerData.offers || []);
+      setBusinessMessage("Demo links and offers loaded.");
+    } catch {
+      setBusinessMessage("Something went wrong loading business data.");
+    } finally {
+      setLoadingBusinessData(false);
+    }
+  }
+
   function setModeAndAsk(selectedMode: Mode) {
     setMode(selectedMode);
     askAlfred(selectedMode);
@@ -168,12 +245,9 @@ ${prompt}
             </p>
 
             <div className="actions">
-              <a className="btn" href="#quick-create">
-                Open Quick Create
-              </a>
-              <a className="btn btn-secondary" href="#memory">
-                View Memory
-              </a>
+              <a className="btn" href="#quick-create">Open Quick Create</a>
+              <a className="btn btn-secondary" href="#business">View Demos</a>
+              <a className="btn btn-secondary" href="#memory">View Memory</a>
             </div>
           </div>
 
@@ -188,34 +262,22 @@ ${prompt}
             />
 
             <div className="mode-grid">
-              <button
-                className="mode"
-                onClick={() => setMode("creative-desk")}
-              >
+              <button className="mode" onClick={() => setMode("creative-desk")}>
                 <strong>Creative Desk Post</strong>
                 <span>Builder’s Brief, Lab Notes or Strategic Reset.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("linkedin-lead")}
-              >
+              <button className="mode" onClick={() => setMode("linkedin-lead")}>
                 <strong>LinkedIn Lead Post</strong>
                 <span>Punchy Mediahubink post with CTA and pinned comment.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("substack-note")}
-              >
+              <button className="mode" onClick={() => setMode("substack-note")}>
                 <strong>Substack Note</strong>
                 <span>Short, thoughtful post for Substack Notes.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("vertical-campaign")}
-              >
+              <button className="mode" onClick={() => setMode("vertical-campaign")}>
                 <strong>Vertical Campaign</strong>
                 <span>5-post campaign for one target industry.</span>
               </button>
@@ -289,6 +351,83 @@ ${prompt}
             <h3>CRM-lite</h3>
             <p>Track prospects, demo interest and follow-ups.</p>
           </div>
+        </section>
+
+        <section className="card" id="business" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Demo Manager + Offer Engine</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadBusinessData}
+              disabled={loadingBusinessData}
+            >
+              {loadingBusinessData ? "Loading..." : "Load Demos + Offers"}
+            </button>
+          </div>
+
+          {businessMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{businessMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "0" }}>
+            <div className="mini-card">
+              <h3>Demos Loaded</h3>
+              <p>{demos.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Offers Loaded</h3>
+              <p>{offers.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Use In Prompts</h3>
+              <p>Loaded demos and offers are passed to Alfred when generating posts.</p>
+            </div>
+          </div>
+
+          {demos.length > 0 && (
+            <>
+              <div className="panel-title" style={{ marginTop: "24px" }}>
+                Demo Links
+              </div>
+
+              <div className="mode-grid">
+                {demos.map((demo) => (
+                  <div className="mode" key={demo.id}>
+                    <strong>{demo.vertical}</strong>
+                    <span>{demo.demo_url}</span>
+                    <span>{demo.cta}</span>
+                    <span>{demo.notes}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {offers.length > 0 && (
+            <>
+              <div className="panel-title" style={{ marginTop: "24px" }}>
+                Offers
+              </div>
+
+              <div className="mode-grid">
+                {offers.map((offer) => (
+                  <div className="mode" key={offer.id}>
+                    <strong>{offer.name}</strong>
+                    <span>{offer.offer_type}</span>
+                    <span>{offer.price}</span>
+                    <span>{offer.description}</span>
+                    <span>{offer.cta}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="card" id="memory" style={{ marginTop: "28px" }}>
