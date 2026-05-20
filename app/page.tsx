@@ -70,7 +70,8 @@ type Mode =
   | "creative-desk"
   | "linkedin-lead"
   | "substack-note"
-  | "vertical-campaign";
+  | "vertical-campaign"
+  | "prospect-intelligence";
 
 const modePrompts: Record<Mode, string> = {
   general:
