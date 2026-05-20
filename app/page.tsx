@@ -120,8 +120,7 @@ const modePrompts: Record<Mode, string> = {
     "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused.",
 
   "prospect-intelligence":
-    "prospect-intelligence":
-  "Act as Mediahubink's commercial intelligence strategist. Analyse the prospect information provided. If only a URL is provided, do not pretend to visit it, but still produce a useful first-pass brief based on the URL, domain clues, industry assumptions and current Mediahubink context. Clearly label assumptions. Always include: 1) Safe assumptions, 2) What to verify, 3) likely pain points, 4) missed revenue or operational gaps, 5) best-fit Mediahubink offer, 6) best relevant demo or project, 7) strongest outreach angle, 8) likely objections, 9) LinkedIn DM with placeholders, 10) email draft with placeholders, 11) next action. Be commercially sharp, practical and persuasive. Use British English. Never fabricate specific facts.",
+    "Act as Mediahubink's commercial intelligence strategist. Analyse the prospect information provided. If only a URL is provided, do not pretend to visit it, but still produce a useful first-pass brief based on the URL, domain clues, industry assumptions and current Mediahubink context. Clearly label assumptions. Always include: 1) Safe assumptions, 2) What to verify, 3) likely pain points, 4) missed revenue or operational gaps, 5) best-fit Mediahubink offer, 6) best relevant demo or project, 7) strongest outreach angle, 8) likely objections, 9) LinkedIn DM with placeholders, 10) email draft with placeholders, 11) next action. Be commercially sharp, practical and persuasive. Use British English. Never fabricate specific facts.",
 };
 
 export default function HomePage() {
@@ -563,24 +562,12 @@ ${prompt}
             </p>
 
             <div className="actions">
-              <a className="btn" href="#quick-create">
-                Open Quick Create
-              </a>
-              <a className="btn btn-secondary" href="#projects">
-                View Projects
-              </a>
-              <a className="btn btn-secondary" href="#knowledge">
-                View Knowledge
-              </a>
-              <a className="btn btn-secondary" href="#business">
-                View Demos
-              </a>
-              <a className="btn btn-secondary" href="#crm">
-                View CRM
-              </a>
-              <a className="btn btn-secondary" href="#memory">
-                View Memory
-              </a>
+              <a className="btn" href="#quick-create">Open Quick Create</a>
+              <a className="btn btn-secondary" href="#projects">View Projects</a>
+              <a className="btn btn-secondary" href="#knowledge">View Knowledge</a>
+              <a className="btn btn-secondary" href="#business">View Demos</a>
+              <a className="btn btn-secondary" href="#crm">View CRM</a>
+              <a className="btn btn-secondary" href="#memory">View Memory</a>
             </div>
           </div>
 
@@ -610,53 +597,31 @@ ${prompt}
                 <span>Short, thoughtful post for Substack Notes.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("vertical-campaign")}
-              >
+              <button className="mode" onClick={() => setMode("vertical-campaign")}>
                 <strong>Vertical Campaign</strong>
                 <span>5-post campaign for one target industry.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("prospect-intelligence")}
-              >
+              <button className="mode" onClick={() => setMode("prospect-intelligence")}>
                 <strong>Prospect Intelligence</strong>
                 <span>Analyse a company, profile or opportunity.</span>
               </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
-              <button
-                className="btn"
-                onClick={() => askAlfred()}
-                disabled={loading}
-              >
+              <button className="btn" onClick={() => askAlfred()} disabled={loading}>
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => setModeAndAsk("creative-desk")}
-                disabled={loading}
-              >
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("creative-desk")} disabled={loading}>
                 Creative Desk
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => setModeAndAsk("linkedin-lead")}
-                disabled={loading}
-              >
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("linkedin-lead")} disabled={loading}>
                 LinkedIn
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => setModeAndAsk("prospect-intelligence")}
-                disabled={loading}
-              >
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("prospect-intelligence")} disabled={loading}>
                 Prospect Intel
               </button>
 
@@ -670,17 +635,11 @@ ${prompt}
                 </button>
               )}
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => copyText(prompt, "Prompt")}
-              >
+              <button className="btn btn-secondary" onClick={() => copyText(prompt, "Prompt")}>
                 Copy Prompt
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => copyText(reply, "Output")}
-              >
+              <button className="btn btn-secondary" onClick={() => copyText(reply, "Output")}>
                 Copy Output
               </button>
 
@@ -688,22 +647,12 @@ ${prompt}
                 Clear Chat
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={saveThought}
-                disabled={saving}
-              >
+              <button className="btn btn-secondary" onClick={saveThought} disabled={saving}>
                 {saving ? "Saving..." : "Save Thought"}
               </button>
             </div>
 
-            <p
-              style={{
-                color: "#a3a3a3",
-                marginTop: "14px",
-                fontSize: "14px",
-              }}
-            >
+            <p style={{ color: "#a3a3a3", marginTop: "14px", fontSize: "14px" }}>
               Current mode: {mode}
               {isListening ? " · Listening..." : ""}
             </p>
@@ -733,7 +682,258 @@ ${prompt}
           </div>
         </section>
 
-        {/* Keep the rest of your dashboard sections below unchanged */}
+        <section className="card" id="projects" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Project / Demo Manager</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadProjects} disabled={loadingProjects}>
+              {loadingProjects ? "Loading..." : "Load Projects"}
+            </button>
+          </div>
+
+          {projectMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{projectMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "0" }}>
+            <div className="mini-card">
+              <h3>Projects Loaded</h3>
+              <p>{projects.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Purpose</h3>
+              <p>Keep your demos, builds and proof assets visible.</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Use In Prompts</h3>
+              <p>Loaded projects are passed to Alfred when generating responses.</p>
+            </div>
+          </div>
+
+          {projects.length > 0 && (
+            <div className="mode-grid" style={{ marginTop: "18px" }}>
+              {projects.map((project) => (
+                <div className="mode" key={project.id}>
+                  <strong>{project.name}</strong>
+                  <span>{project.category || "No category"}</span>
+                  <span>{project.audience || "No audience"}</span>
+                  <span>{project.url || "No URL"}</span>
+                  <span>{project.description || ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card" id="crm" style={{ marginTop: "28px" }}>
+          <div className="panel-title">CRM-lite</div>
+
+          <div className="mode-grid">
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadName} onChange={(e) => setLeadName(e.target.value)} placeholder="Contact name" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadCompany} onChange={(e) => setLeadCompany(e.target.value)} placeholder="Company" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} placeholder="Email" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} placeholder="Phone" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadIndustry} onChange={(e) => setLeadIndustry(e.target.value)} placeholder="Industry" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi, voice agent, demo" />
+
+            <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="demo-interest">Demo Interest</option>
+              <option value="proposal">Proposal</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+
+            <textarea className="input-box" value={leadNotes} onChange={(e) => setLeadNotes(e.target.value)} placeholder="Notes" />
+          </div>
+
+          <div className="actions" style={{ marginTop: "18px" }}>
+            <button className="btn" onClick={saveLead} disabled={savingLead}>
+              {savingLead ? "Saving lead..." : "Save Lead"}
+            </button>
+
+            <button className="btn btn-secondary" onClick={loadLeads} disabled={loadingLeads}>
+              {loadingLeads ? "Loading..." : "Load Leads"}
+            </button>
+          </div>
+
+          {leadMessage && (
+            <div className="mode" style={{ marginTop: "18px" }}>
+              <strong>Status:</strong>
+              <span>{leadMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "18px" }}>
+            <div className="mini-card">
+              <h3>Leads Loaded</h3>
+              <p>{leads.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Purpose</h3>
+              <p>Track prospects, demo interest and follow-up conversations.</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Next Upgrade</h3>
+              <p>Add follow-up dates and Alfred reminders.</p>
+            </div>
+          </div>
+
+          {leads.length > 0 && (
+            <div className="mode-grid" style={{ marginTop: "18px" }}>
+              {leads.map((lead) => (
+                <div className="mode" key={lead.id}>
+                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                  <span>Contact: {lead.name || "Not added"}</span>
+                  <span>Email: {lead.email || "Not added"}</span>
+                  <span>Phone: {lead.phone || "Not added"}</span>
+                  <span>Industry: {lead.industry || "Not added"}</span>
+                  <span>Interest: {lead.interest || "Not added"}</span>
+                  <span>Stage: {lead.stage || "new"}</span>
+                  <span>{lead.notes || ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card" id="knowledge" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Knowledge Vault</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadKnowledge} disabled={loadingKnowledge}>
+              {loadingKnowledge ? "Loading..." : "Load Knowledge"}
+            </button>
+          </div>
+
+          {knowledgeMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{knowledgeMessage}</span>
+            </div>
+          )}
+
+          {knowledge.length === 0 ? (
+            <p className="lead" style={{ fontSize: "16px" }}>
+              No knowledge loaded yet.
+            </p>
+          ) : (
+            <div className="mode-grid">
+              {knowledge.map((item) => (
+                <div className="mode" key={item.id}>
+                  <strong>{item.category}: {item.title}</strong>
+                  <span>{item.content}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card" id="business" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Demo Manager + Offer Engine</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadBusinessData} disabled={loadingBusinessData}>
+              {loadingBusinessData ? "Loading..." : "Load Demos + Offers"}
+            </button>
+          </div>
+
+          {businessMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{businessMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "0" }}>
+            <div className="mini-card">
+              <h3>Demos Loaded</h3>
+              <p>{demos.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Offers Loaded</h3>
+              <p>{offers.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Use In Prompts</h3>
+              <p>Loaded demos and offers are passed to Alfred when generating posts.</p>
+            </div>
+          </div>
+
+          {demos.length > 0 && (
+            <>
+              <div className="panel-title" style={{ marginTop: "24px" }}>
+                Demo Links
+              </div>
+
+              <div className="mode-grid">
+                {demos.map((demo) => (
+                  <div className="mode" key={demo.id}>
+                    <strong>{demo.vertical}</strong>
+                    <span>{demo.demo_url}</span>
+                    <span>{demo.cta}</span>
+                    <span>{demo.notes}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {offers.length > 0 && (
+            <>
+              <div className="panel-title" style={{ marginTop: "24px" }}>
+                Offers
+              </div>
+
+              <div className="mode-grid">
+                {offers.map((offer) => (
+                  <div className="mode" key={offer.id}>
+                    <strong>{offer.name}</strong>
+                    <span>{offer.offer_type}</span>
+                    <span>{offer.price}</span>
+                    <span>{offer.description}</span>
+                    <span>{offer.cta}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="card" id="memory" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Alfred’s Memory</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadThoughts} disabled={loadingThoughts}>
+              {loadingThoughts ? "Loading..." : "Refresh Memory"}
+            </button>
+          </div>
+
+          {thoughts.length === 0 ? (
+            <p className="lead" style={{ fontSize: "16px" }}>
+              No thoughts loaded yet. Save a thought, then refresh memory.
+            </p>
+          ) : (
+            <div className="mode-grid">
+              {thoughts.map((thought) => (
+                <div className="mode" key={thought.id}>
+                  <strong>{thought.title || "Untitled thought"}</strong>
+                  <span>{thought.content}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
