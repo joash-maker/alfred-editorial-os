@@ -23,6 +23,15 @@ select {
   font: inherit;
 }
 
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .page {
   min-height: 100vh;
   background:
@@ -160,8 +169,10 @@ h1 {
 .mode {
   border: 1px solid #262626;
   background: #0d0d0d;
+  color: #f5f5f5;
   padding: 16px;
   border-radius: 18px;
+  text-align: left;
 }
 
 .mode strong {
@@ -170,6 +181,7 @@ h1 {
 }
 
 .mode span {
+  display: block;
   color: #a3a3a3;
   font-size: 14px;
   line-height: 1.45;
@@ -199,6 +211,95 @@ h1 {
   color: #a3a3a3;
   line-height: 1.5;
   font-size: 14px;
+}
+
+.markdown-output {
+  color: #e5e5e5;
+  line-height: 1.65;
+  font-size: 15px;
+}
+
+.markdown-output h1,
+.markdown-output h2,
+.markdown-output h3 {
+  color: #ffffff;
+  line-height: 1.15;
+  margin: 22px 0 10px;
+  letter-spacing: -0.03em;
+}
+
+.markdown-output h1 {
+  font-size: 28px;
+}
+
+.markdown-output h2 {
+  font-size: 22px;
+}
+
+.markdown-output h3 {
+  font-size: 18px;
+}
+
+.markdown-output p {
+  margin: 10px 0;
+}
+
+.markdown-output ul,
+.markdown-output ol {
+  padding-left: 22px;
+  margin: 12px 0;
+}
+
+.markdown-output li {
+  margin: 6px 0;
+}
+
+.markdown-output blockquote {
+  border-left: 3px solid #737373;
+  padding-left: 14px;
+  margin: 16px 0;
+  color: #d4d4d4;
+}
+
+.markdown-output table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 14px;
+  display: block;
+  overflow-x: auto;
+}
+
+.markdown-output th,
+.markdown-output td {
+  border: 1px solid #333;
+  padding: 10px;
+  text-align: left;
+}
+
+.markdown-output th {
+  background: #111;
+  color: #fff;
+}
+
+.markdown-output code {
+  background: #111;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+
+.markdown-output pre {
+  background: #080808;
+  border: 1px solid #333;
+  padding: 14px;
+  border-radius: 14px;
+  overflow-x: auto;
+}
+
+.markdown-output hr {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 22px 0;
 }
 
 @media (max-width: 860px) {
