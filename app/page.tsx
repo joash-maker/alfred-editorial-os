@@ -10,7 +10,7 @@ type SpeechRecognitionType = {
   start: () => void;
   stop: () => void;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
- .onerror: (() => void) | null;
+  onerror: (() => void) | null;
   onend: (() => void) | null;
 };
 
