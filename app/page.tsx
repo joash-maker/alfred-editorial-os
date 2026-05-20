@@ -120,7 +120,8 @@ const modePrompts: Record<Mode, string> = {
     "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused.",
 
   "prospect-intelligence":
-    "Act as Mediahubink's commercial intelligence strategist. Analyse the prospect information provided. Determine what the company likely does, their probable operational pain points, missed revenue opportunities, best-fit Mediahubink AI offer, best relevant demo from current projects, strongest outreach angle, likely objections, suggested LinkedIn DM, suggested email, and a follow-up strategy. Be commercially sharp, practical, and persuasive. Use British English. Do not pretend to have visited links unless the user pasted details. If only a URL is provided, make clear assumptions and recommend what to verify.",
+    "prospect-intelligence":
+  "Act as Mediahubink's commercial intelligence strategist. Analyse the prospect information provided. If only a URL is provided, do not pretend to visit it, but still produce a useful first-pass brief based on the URL, domain clues, industry assumptions and current Mediahubink context. Clearly label assumptions. Always include: 1) Safe assumptions, 2) What to verify, 3) likely pain points, 4) missed revenue or operational gaps, 5) best-fit Mediahubink offer, 6) best relevant demo or project, 7) strongest outreach angle, 8) likely objections, 9) LinkedIn DM with placeholders, 10) email draft with placeholders, 11) next action. Be commercially sharp, practical and persuasive. Use British English. Never fabricate specific facts.",
 };
 
 export default function HomePage() {
