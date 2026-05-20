@@ -76,14 +76,21 @@ type Mode =
 const modePrompts: Record<Mode, string> = {
   general:
     "Respond as Alfred, Joash's editorial and growth chief of staff. Be calm, clear, useful and commercially aware.",
+
   "creative-desk":
     "Turn the user's thought into a Creative Desk content idea. Suggest whether it should become Tuesday Builder’s Brief, Thursday Lab Notes, or Sunday Strategic Reset. Then create a strong title, angle, outline, Substack CTA, LinkedIn teaser, Substack Note and visual brief.",
+
   "linkedin-lead":
     "Create a modern, punchy, effective LinkedIn lead-generation post for Mediahubink. Use British English. Make it commercially sharp, direct and specific. Structure it with a strong hook, pain point, numbers or business impact, mechanism, clear CTA, and a pinned comment.",
+
   "substack-note":
     "Create a short Substack Note from the user's thought. Make it thoughtful, concise, calm and worth replying to. Include one sharp idea, one short reflection, and a soft invitation to read or subscribe.",
+
   "vertical-campaign":
     "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused.",
+
+  "prospect-intelligence":
+    "Act as Mediahubink's commercial intelligence strategist. Analyse the prospect information provided. Determine what the company likely does, their probable operational pain points, missed revenue opportunities, best-fit Mediahubink AI offer, best relevant demo from current projects, strongest outreach angle, likely objections, suggested LinkedIn DM, suggested email, and a follow-up strategy. Be commercially sharp, practical, and persuasive. Use British English. Do not pretend to have visited links unless the user pasted details. If only a URL is provided, make clear assumptions and recommend what to verify.",
 };
 
 export default function HomePage() {
@@ -132,27 +139,53 @@ export default function HomePage() {
 
     const demoContext =
       demos.length > 0
-        ? demos.map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`).join("\n")
+        ? demos
+            .map(
+              (d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`
+            )
+            .join("\n")
         : "No demo links loaded.";
 
     const offerContext =
       offers.length > 0
-        ? offers.map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`).join("\n")
+        ? offers
+            .map(
+              (o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`
+            )
+            .join("\n")
         : "No offers loaded.";
 
     const knowledgeContext =
       knowledge.length > 0
-        ? knowledge.map((k) => `${k.category} - ${k.title}: ${k.content}`).join("\n")
+        ? knowledge
+            .map((k) => `${k.category} - ${k.title}: ${k.content}`)
+            .join("\n")
         : "No knowledge loaded.";
 
     const leadContext =
       leads.length > 0
-        ? leads.map((l) => `${l.company || l.name || "Unnamed lead"} | ${l.industry || "No industry"} | ${l.interest || "No interest"} | Stage: ${l.stage || "new"}`).join("\n")
+        ? leads
+            .map(
+              (l) =>
+                `${l.company || l.name || "Unnamed lead"} | ${
+                  l.industry || "No industry"
+                } | ${l.interest || "No interest"} | Stage: ${
+                  l.stage || "new"
+                }`
+            )
+            .join("\n")
         : "No leads loaded.";
 
     const projectContext =
       projects.length > 0
-        ? projects.map((p) => `${p.name}: ${p.url || ""} | ${p.category || ""} | Audience: ${p.audience || ""} | ${p.description || ""}`).join("\n")
+        ? projects
+            .map(
+              (p) =>
+                `${p.name}: ${p.url || ""} | ${
+                  p.category || ""
+                } | Audience: ${p.audience || ""} | ${p.description || ""}`
+            )
+            .join("\n")
         : "No projects loaded.";
 
     const fullPrompt = `
@@ -426,12 +459,24 @@ ${prompt}
             </p>
 
             <div className="actions">
-              <a className="btn" href="#quick-create">Open Quick Create</a>
-              <a className="btn btn-secondary" href="#projects">View Projects</a>
-              <a className="btn btn-secondary" href="#knowledge">View Knowledge</a>
-              <a className="btn btn-secondary" href="#business">View Demos</a>
-              <a className="btn btn-secondary" href="#crm">View CRM</a>
-              <a className="btn btn-secondary" href="#memory">View Memory</a>
+              <a className="btn" href="#quick-create">
+                Open Quick Create
+              </a>
+              <a className="btn btn-secondary" href="#projects">
+                View Projects
+              </a>
+              <a className="btn btn-secondary" href="#knowledge">
+                View Knowledge
+              </a>
+              <a className="btn btn-secondary" href="#business">
+                View Demos
+              </a>
+              <a className="btn btn-secondary" href="#crm">
+                View CRM
+              </a>
+              <a className="btn btn-secondary" href="#memory">
+                View Memory
+              </a>
             </div>
           </div>
 
@@ -442,7 +487,7 @@ ${prompt}
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: A dentist asked if AI will replace reception staff."
+              placeholder="Example: Paste a company URL, LinkedIn profile, prospect note, or content idea."
             />
 
             <div className="mode-grid">
@@ -461,31 +506,72 @@ ${prompt}
                 <span>Short, thoughtful post for Substack Notes.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("vertical-campaign")}>
+              <button
+                className="mode"
+                onClick={() => setMode("vertical-campaign")}
+              >
                 <strong>Vertical Campaign</strong>
                 <span>5-post campaign for one target industry.</span>
+              </button>
+
+              <button
+                className="mode"
+                onClick={() => setMode("prospect-intelligence")}
+              >
+                <strong>Prospect Intelligence</strong>
+                <span>Analyse a company, profile or opportunity.</span>
               </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
-              <button className="btn" onClick={() => askAlfred()} disabled={loading}>
+              <button
+                className="btn"
+                onClick={() => askAlfred()}
+                disabled={loading}
+              >
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
               </button>
 
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("creative-desk")} disabled={loading}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setModeAndAsk("creative-desk")}
+                disabled={loading}
+              >
                 Creative Desk
               </button>
 
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("linkedin-lead")} disabled={loading}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setModeAndAsk("linkedin-lead")}
+                disabled={loading}
+              >
                 LinkedIn
               </button>
 
-              <button className="btn btn-secondary" onClick={saveThought} disabled={saving}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setModeAndAsk("prospect-intelligence")}
+                disabled={loading}
+              >
+                Prospect Intel
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={saveThought}
+                disabled={saving}
+              >
                 {saving ? "Saving..." : "Save Thought"}
               </button>
             </div>
 
-            <p style={{ color: "#a3a3a3", marginTop: "14px", fontSize: "14px" }}>
+            <p
+              style={{
+                color: "#a3a3a3",
+                marginTop: "14px",
+                fontSize: "14px",
+              }}
+            >
               Current mode: {mode}
             </p>
 
@@ -497,7 +583,10 @@ ${prompt}
             )}
 
             {reply && (
-              <div className="mode" style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}>
+              <div
+                className="mode"
+                style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}
+              >
                 <strong>Alfred says:</strong>
                 <span>{reply}</span>
               </div>
@@ -509,7 +598,11 @@ ${prompt}
           <div className="panel-title">Project / Demo Manager</div>
 
           <div className="actions" style={{ marginBottom: "18px" }}>
-            <button className="btn btn-secondary" onClick={loadProjects} disabled={loadingProjects}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadProjects}
+              disabled={loadingProjects}
+            >
               {loadingProjects ? "Loading..." : "Load Projects"}
             </button>
           </div>
@@ -534,7 +627,9 @@ ${prompt}
 
             <div className="mini-card">
               <h3>Use In Prompts</h3>
-              <p>Loaded projects are passed to Alfred when generating responses.</p>
+              <p>
+                Loaded projects are passed to Alfred when generating responses.
+              </p>
             </div>
           </div>
 
@@ -557,14 +652,55 @@ ${prompt}
           <div className="panel-title">CRM-lite</div>
 
           <div className="mode-grid">
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadName} onChange={(e) => setLeadName(e.target.value)} placeholder="Contact name" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadCompany} onChange={(e) => setLeadCompany(e.target.value)} placeholder="Company" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} placeholder="Email" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} placeholder="Phone" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadIndustry} onChange={(e) => setLeadIndustry(e.target.value)} placeholder="Industry" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi, voice agent, demo" />
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadName}
+              onChange={(e) => setLeadName(e.target.value)}
+              placeholder="Contact name"
+            />
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadCompany}
+              onChange={(e) => setLeadCompany(e.target.value)}
+              placeholder="Company"
+            />
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadEmail}
+              onChange={(e) => setLeadEmail(e.target.value)}
+              placeholder="Email"
+            />
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadPhone}
+              onChange={(e) => setLeadPhone(e.target.value)}
+              placeholder="Phone"
+            />
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadIndustry}
+              onChange={(e) => setLeadIndustry(e.target.value)}
+              placeholder="Industry"
+            />
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadInterest}
+              onChange={(e) => setLeadInterest(e.target.value)}
+              placeholder="Interest, e.g. Fredi, voice agent, demo"
+            />
 
-            <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
+            <select
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadStage}
+              onChange={(e) => setLeadStage(e.target.value)}
+            >
               <option value="new">New</option>
               <option value="contacted">Contacted</option>
               <option value="demo-interest">Demo Interest</option>
@@ -573,7 +709,12 @@ ${prompt}
               <option value="lost">Lost</option>
             </select>
 
-            <textarea className="input-box" value={leadNotes} onChange={(e) => setLeadNotes(e.target.value)} placeholder="Notes" />
+            <textarea
+              className="input-box"
+              value={leadNotes}
+              onChange={(e) => setLeadNotes(e.target.value)}
+              placeholder="Notes"
+            />
           </div>
 
           <div className="actions" style={{ marginTop: "18px" }}>
@@ -581,7 +722,11 @@ ${prompt}
               {savingLead ? "Saving lead..." : "Save Lead"}
             </button>
 
-            <button className="btn btn-secondary" onClick={loadLeads} disabled={loadingLeads}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadLeads}
+              disabled={loadingLeads}
+            >
               {loadingLeads ? "Loading..." : "Load Leads"}
             </button>
           </div>
@@ -632,7 +777,11 @@ ${prompt}
           <div className="panel-title">Knowledge Vault</div>
 
           <div className="actions" style={{ marginBottom: "18px" }}>
-            <button className="btn btn-secondary" onClick={loadKnowledge} disabled={loadingKnowledge}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadKnowledge}
+              disabled={loadingKnowledge}
+            >
               {loadingKnowledge ? "Loading..." : "Load Knowledge"}
             </button>
           </div>
@@ -652,7 +801,9 @@ ${prompt}
             <div className="mode-grid">
               {knowledge.map((item) => (
                 <div className="mode" key={item.id}>
-                  <strong>{item.category}: {item.title}</strong>
+                  <strong>
+                    {item.category}: {item.title}
+                  </strong>
                   <span>{item.content}</span>
                 </div>
               ))}
@@ -664,7 +815,11 @@ ${prompt}
           <div className="panel-title">Demo Manager + Offer Engine</div>
 
           <div className="actions" style={{ marginBottom: "18px" }}>
-            <button className="btn btn-secondary" onClick={loadBusinessData} disabled={loadingBusinessData}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadBusinessData}
+              disabled={loadingBusinessData}
+            >
               {loadingBusinessData ? "Loading..." : "Load Demos + Offers"}
             </button>
           </div>
@@ -689,7 +844,10 @@ ${prompt}
 
             <div className="mini-card">
               <h3>Use In Prompts</h3>
-              <p>Loaded demos and offers are passed to Alfred when generating posts.</p>
+              <p>
+                Loaded demos and offers are passed to Alfred when generating
+                posts.
+              </p>
             </div>
           </div>
 
@@ -737,7 +895,11 @@ ${prompt}
           <div className="panel-title">Alfred’s Memory</div>
 
           <div className="actions" style={{ marginBottom: "18px" }}>
-            <button className="btn btn-secondary" onClick={loadThoughts} disabled={loadingThoughts}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadThoughts}
+              disabled={loadingThoughts}
+            >
               {loadingThoughts ? "Loading..." : "Refresh Memory"}
             </button>
           </div>
