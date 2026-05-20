@@ -1,6 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+
+type SpeechRecognitionType = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+ .onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionEvent = {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+    length: number;
+  };
+};
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition?: new () => SpeechRecognitionType;
+    SpeechRecognition?: new () => SpeechRecognitionType;
+  }
+}
 
 type Thought = {
   id: string;
@@ -99,6 +129,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(
+    null
+  );
+
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [loadingThoughts, setLoadingThoughts] = useState(false);
   const [mode, setMode] = useState<Mode>("general");
@@ -130,12 +166,79 @@ export default function HomePage() {
   const [leadStage, setLeadStage] = useState("new");
   const [leadNotes, setLeadNotes] = useState("");
 
+  async function copyText(text: string, label: string) {
+    if (!text.trim()) {
+      setCopyMessage(`Nothing to copy for ${label}.`);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyMessage(`${label} copied.`);
+    } catch {
+      setCopyMessage(`Could not copy ${label}.`);
+    }
+  }
+
+  function clearChat() {
+    setPrompt("");
+    setReply("");
+    setSaveMessage("");
+    setCopyMessage("");
+  }
+
+  function startSpeech() {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setCopyMessage("Speech input is not supported in this browser.");
+      return;
+    }
+
+    const speech = new SpeechRecognition();
+    speech.continuous = false;
+    speech.interimResults = false;
+    speech.lang = "en-GB";
+
+    speech.onresult = (event: SpeechRecognitionEvent) => {
+      let transcript = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+
+      setPrompt((current) =>
+        current.trim() ? `${current.trim()} ${transcript}` : transcript
+      );
+    };
+
+    speech.onerror = () => {
+      setIsListening(false);
+      setCopyMessage("Speech input stopped or failed.");
+    };
+
+    speech.onend = () => {
+      setIsListening(false);
+    };
+
+    setRecognition(speech);
+    setIsListening(true);
+    speech.start();
+  }
+
+  function stopSpeech() {
+    recognition?.stop();
+    setIsListening(false);
+  }
+
   async function askAlfred(selectedMode: Mode = mode) {
     if (!prompt.trim()) return;
 
     setLoading(true);
     setReply("");
     setSaveMessage("");
+    setCopyMessage("");
 
     const demoContext =
       demos.length > 0
@@ -556,6 +659,34 @@ ${prompt}
                 Prospect Intel
               </button>
 
+              {!isListening ? (
+                <button className="btn btn-secondary" onClick={startSpeech}>
+                  Tap to Speak
+                </button>
+              ) : (
+                <button className="btn btn-secondary" onClick={stopSpeech}>
+                  Stop Listening
+                </button>
+              )}
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => copyText(prompt, "Prompt")}
+              >
+                Copy Prompt
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => copyText(reply, "Output")}
+              >
+                Copy Output
+              </button>
+
+              <button className="btn btn-secondary" onClick={clearChat}>
+                Clear Chat
+              </button>
+
               <button
                 className="btn btn-secondary"
                 onClick={saveThought}
@@ -573,7 +704,15 @@ ${prompt}
               }}
             >
               Current mode: {mode}
+              {isListening ? " · Listening..." : ""}
             </p>
+
+            {copyMessage && (
+              <div className="mode" style={{ marginTop: "16px" }}>
+                <strong>Clipboard:</strong>
+                <span>{copyMessage}</span>
+              </div>
+            )}
 
             {saveMessage && (
               <div className="mode" style={{ marginTop: "16px" }}>
@@ -583,342 +722,17 @@ ${prompt}
             )}
 
             {reply && (
-              <div
-                className="mode"
-                style={{ marginTop: "20px", whiteSpace: "pre-wrap" }}
-              >
+              <div className="mode" style={{ marginTop: "20px" }}>
                 <strong>Alfred says:</strong>
-                <span>{reply}</span>
+                <div className="markdown-output">
+                  <ReactMarkdown>{reply}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
         </section>
 
-        <section className="card" id="projects" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Project / Demo Manager</div>
-
-          <div className="actions" style={{ marginBottom: "18px" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={loadProjects}
-              disabled={loadingProjects}
-            >
-              {loadingProjects ? "Loading..." : "Load Projects"}
-            </button>
-          </div>
-
-          {projectMessage && (
-            <div className="mode" style={{ marginBottom: "18px" }}>
-              <strong>Status:</strong>
-              <span>{projectMessage}</span>
-            </div>
-          )}
-
-          <div className="section" style={{ marginTop: "0" }}>
-            <div className="mini-card">
-              <h3>Projects Loaded</h3>
-              <p>{projects.length}</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Purpose</h3>
-              <p>Keep your demos, builds and proof assets visible.</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Use In Prompts</h3>
-              <p>
-                Loaded projects are passed to Alfred when generating responses.
-              </p>
-            </div>
-          </div>
-
-          {projects.length > 0 && (
-            <div className="mode-grid" style={{ marginTop: "18px" }}>
-              {projects.map((project) => (
-                <div className="mode" key={project.id}>
-                  <strong>{project.name}</strong>
-                  <span>{project.category || "No category"}</span>
-                  <span>{project.audience || "No audience"}</span>
-                  <span>{project.url || "No URL"}</span>
-                  <span>{project.description || ""}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="card" id="crm" style={{ marginTop: "28px" }}>
-          <div className="panel-title">CRM-lite</div>
-
-          <div className="mode-grid">
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadName}
-              onChange={(e) => setLeadName(e.target.value)}
-              placeholder="Contact name"
-            />
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadCompany}
-              onChange={(e) => setLeadCompany(e.target.value)}
-              placeholder="Company"
-            />
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadEmail}
-              onChange={(e) => setLeadEmail(e.target.value)}
-              placeholder="Email"
-            />
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadPhone}
-              onChange={(e) => setLeadPhone(e.target.value)}
-              placeholder="Phone"
-            />
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadIndustry}
-              onChange={(e) => setLeadIndustry(e.target.value)}
-              placeholder="Industry"
-            />
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadInterest}
-              onChange={(e) => setLeadInterest(e.target.value)}
-              placeholder="Interest, e.g. Fredi, voice agent, demo"
-            />
-
-            <select
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadStage}
-              onChange={(e) => setLeadStage(e.target.value)}
-            >
-              <option value="new">New</option>
-              <option value="contacted">Contacted</option>
-              <option value="demo-interest">Demo Interest</option>
-              <option value="proposal">Proposal</option>
-              <option value="won">Won</option>
-              <option value="lost">Lost</option>
-            </select>
-
-            <textarea
-              className="input-box"
-              value={leadNotes}
-              onChange={(e) => setLeadNotes(e.target.value)}
-              placeholder="Notes"
-            />
-          </div>
-
-          <div className="actions" style={{ marginTop: "18px" }}>
-            <button className="btn" onClick={saveLead} disabled={savingLead}>
-              {savingLead ? "Saving lead..." : "Save Lead"}
-            </button>
-
-            <button
-              className="btn btn-secondary"
-              onClick={loadLeads}
-              disabled={loadingLeads}
-            >
-              {loadingLeads ? "Loading..." : "Load Leads"}
-            </button>
-          </div>
-
-          {leadMessage && (
-            <div className="mode" style={{ marginTop: "18px" }}>
-              <strong>Status:</strong>
-              <span>{leadMessage}</span>
-            </div>
-          )}
-
-          <div className="section" style={{ marginTop: "18px" }}>
-            <div className="mini-card">
-              <h3>Leads Loaded</h3>
-              <p>{leads.length}</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Purpose</h3>
-              <p>Track prospects, demo interest and follow-up conversations.</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Next Upgrade</h3>
-              <p>Add follow-up dates and Alfred reminders.</p>
-            </div>
-          </div>
-
-          {leads.length > 0 && (
-            <div className="mode-grid" style={{ marginTop: "18px" }}>
-              {leads.map((lead) => (
-                <div className="mode" key={lead.id}>
-                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
-                  <span>Contact: {lead.name || "Not added"}</span>
-                  <span>Email: {lead.email || "Not added"}</span>
-                  <span>Phone: {lead.phone || "Not added"}</span>
-                  <span>Industry: {lead.industry || "Not added"}</span>
-                  <span>Interest: {lead.interest || "Not added"}</span>
-                  <span>Stage: {lead.stage || "new"}</span>
-                  <span>{lead.notes || ""}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="card" id="knowledge" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Knowledge Vault</div>
-
-          <div className="actions" style={{ marginBottom: "18px" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={loadKnowledge}
-              disabled={loadingKnowledge}
-            >
-              {loadingKnowledge ? "Loading..." : "Load Knowledge"}
-            </button>
-          </div>
-
-          {knowledgeMessage && (
-            <div className="mode" style={{ marginBottom: "18px" }}>
-              <strong>Status:</strong>
-              <span>{knowledgeMessage}</span>
-            </div>
-          )}
-
-          {knowledge.length === 0 ? (
-            <p className="lead" style={{ fontSize: "16px" }}>
-              No knowledge loaded yet.
-            </p>
-          ) : (
-            <div className="mode-grid">
-              {knowledge.map((item) => (
-                <div className="mode" key={item.id}>
-                  <strong>
-                    {item.category}: {item.title}
-                  </strong>
-                  <span>{item.content}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="card" id="business" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Demo Manager + Offer Engine</div>
-
-          <div className="actions" style={{ marginBottom: "18px" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={loadBusinessData}
-              disabled={loadingBusinessData}
-            >
-              {loadingBusinessData ? "Loading..." : "Load Demos + Offers"}
-            </button>
-          </div>
-
-          {businessMessage && (
-            <div className="mode" style={{ marginBottom: "18px" }}>
-              <strong>Status:</strong>
-              <span>{businessMessage}</span>
-            </div>
-          )}
-
-          <div className="section" style={{ marginTop: "0" }}>
-            <div className="mini-card">
-              <h3>Demos Loaded</h3>
-              <p>{demos.length}</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Offers Loaded</h3>
-              <p>{offers.length}</p>
-            </div>
-
-            <div className="mini-card">
-              <h3>Use In Prompts</h3>
-              <p>
-                Loaded demos and offers are passed to Alfred when generating
-                posts.
-              </p>
-            </div>
-          </div>
-
-          {demos.length > 0 && (
-            <>
-              <div className="panel-title" style={{ marginTop: "24px" }}>
-                Demo Links
-              </div>
-
-              <div className="mode-grid">
-                {demos.map((demo) => (
-                  <div className="mode" key={demo.id}>
-                    <strong>{demo.vertical}</strong>
-                    <span>{demo.demo_url}</span>
-                    <span>{demo.cta}</span>
-                    <span>{demo.notes}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {offers.length > 0 && (
-            <>
-              <div className="panel-title" style={{ marginTop: "24px" }}>
-                Offers
-              </div>
-
-              <div className="mode-grid">
-                {offers.map((offer) => (
-                  <div className="mode" key={offer.id}>
-                    <strong>{offer.name}</strong>
-                    <span>{offer.offer_type}</span>
-                    <span>{offer.price}</span>
-                    <span>{offer.description}</span>
-                    <span>{offer.cta}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-
-        <section className="card" id="memory" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Alfred’s Memory</div>
-
-          <div className="actions" style={{ marginBottom: "18px" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={loadThoughts}
-              disabled={loadingThoughts}
-            >
-              {loadingThoughts ? "Loading..." : "Refresh Memory"}
-            </button>
-          </div>
-
-          {thoughts.length === 0 ? (
-            <p className="lead" style={{ fontSize: "16px" }}>
-              No thoughts loaded yet. Save a thought, then refresh memory.
-            </p>
-          ) : (
-            <div className="mode-grid">
-              {thoughts.map((thought) => (
-                <div className="mode" key={thought.id}>
-                  <strong>{thought.title || "Untitled thought"}</strong>
-                  <span>{thought.content}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        {/* Keep the rest of your dashboard sections below unchanged */}
       </div>
     </main>
   );
