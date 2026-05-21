@@ -848,6 +848,14 @@ ${prompt}
 >
   <Printer size={18} />
 </button>
+
+<button
+  className="icon-btn"
+  onClick={openProposalPage}
+  title="Open Branded Proposal"
+>
+  <ExternalLink size={18} />
+</button>
                 <button className="icon-btn" onClick={clearChat} title="Clear Chat">
                   <Trash2 size={18} />
                 </button>
