@@ -84,6 +84,10 @@ type Lead = {
   notes: string | null;
   follow_up_date: string | null;
   estimated_value: number | null;
+  score: number | null;
+  priority: string | null;
+  next_action: string | null;
+  last_contacted: string | null;
 };
 
 type Project = {
@@ -105,7 +109,8 @@ type Mode =
   | "prospect-intelligence"
   | "campaign-weekly"
   | "prospect-outreach"
-  | "metrics-review";
+  | "metrics-review"
+  | "lead-operator";
 
 const modePrompts: Record<Mode, string> = {
   general:
@@ -134,6 +139,9 @@ const modePrompts: Record<Mode, string> = {
 
   "metrics-review":
     "Act as Alfred, Mediahubink's campaign analyst. Review the metrics, campaign notes or weekly reflection provided. Identify what worked, what underperformed, likely reasons, strongest vertical, best content angle, CRM implications, next week's recommendation, what to stop, what to double down on, and one clear action plan. Be honest, practical and commercially focused.",
+
+  "lead-operator":
+    "Act as Mediahubink's AI sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
 };
 
 export default function HomePage() {
@@ -279,11 +287,14 @@ export default function HomePage() {
         ? leads
             .map(
               (l) =>
-                `${l.company || l.name || "Unnamed lead"} | ${
-                  l.industry || "No industry"
-                } | ${l.interest || "No interest"} | Stage: ${
-                  l.stage || "new"
-                }`
+                `${l.company || l.name || "Unnamed lead"} |
+${l.industry || "No industry"} |
+Interest: ${l.interest || "None"} |
+Stage: ${l.stage || "new"} |
+Score: ${l.score || 0} |
+Priority: ${l.priority || "medium"} |
+Next: ${l.next_action || "none"} |
+Notes: ${l.notes || "none"}`
             )
             .join("\n")
         : "No leads loaded.";
@@ -647,6 +658,11 @@ ${prompt}
                 <strong>Metrics Review</strong>
                 <span>Review results and decide what to adjust next.</span>
               </button>
+
+              <button className="mode" onClick={() => setMode("lead-operator")}>
+                <strong>Lead Operator</strong>
+                <span>Prioritise CRM leads and decide who to chase next.</span>
+              </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
@@ -676,6 +692,10 @@ ${prompt}
 
               <button className="btn btn-secondary" onClick={() => setModeAndAsk("metrics-review")} disabled={loading}>
                 Metrics
+              </button>
+
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("lead-operator")} disabled={loading}>
+                Lead Operator
               </button>
 
               <div className="icon-actions">
@@ -904,6 +924,9 @@ ${prompt}
                   <span>Industry: {lead.industry || "Not added"}</span>
                   <span>Interest: {lead.interest || "Not added"}</span>
                   <span>Stage: {lead.stage || "new"}</span>
+                  <span>Score: {lead.score ?? 0}</span>
+                  <span>Priority: {lead.priority || "medium"}</span>
+                  <span>Next action: {lead.next_action || "Not added"}</span>
                   <span>{lead.notes || ""}</span>
                 </div>
               ))}
