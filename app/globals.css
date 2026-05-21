@@ -493,9 +493,10 @@ h1 {
     color: #111111 !important;
   }
 
-  .proposal-toolbar {
-    display: none !important;
-  }
+  .proposal-toolbar,
+.proposal-toolbar * {
+  display: none !important;
+}
 
   .proposal-page {
     background: #ffffff !important;
