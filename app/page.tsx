@@ -102,7 +102,10 @@ type Mode =
   | "linkedin-lead"
   | "substack-note"
   | "vertical-campaign"
-  | "prospect-intelligence";
+  | "prospect-intelligence"
+  | "campaign-weekly"
+  | "prospect-outreach"
+  | "metrics-review";
 
 const modePrompts: Record<Mode, string> = {
   general:
