@@ -244,7 +244,8 @@ export default function HomePage() {
     }
 
     localStorage.setItem("alfredProposal", reply);
-    window.open("/proposal", "_blank");
+sessionStorage.setItem("alfredProposal", reply);
+window.open("/proposal", "_blank");
   }
 
   function startSpeech() {
