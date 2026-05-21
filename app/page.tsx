@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { Mic, Square, Clipboard, Copy, Trash2 } from "lucide-react";
 
 type SpeechRecognitionType = {
   continuous: boolean;
@@ -625,27 +626,29 @@ ${prompt}
                 Prospect Intel
               </button>
 
-              {!isListening ? (
-                <button className="btn btn-secondary" onClick={startSpeech}>
-                  Tap to Speak
+              <div className="icon-actions">
+                {!isListening ? (
+                  <button className="icon-btn" onClick={startSpeech} title="Tap to Speak">
+                    <Mic size={18} />
+                  </button>
+                ) : (
+                  <button className="icon-btn listening" onClick={stopSpeech} title="Stop Listening">
+                    <Square size={18} />
+                  </button>
+                )}
+
+                <button className="icon-btn" onClick={() => copyText(prompt, "Prompt")} title="Copy Prompt">
+                  <Clipboard size={18} />
                 </button>
-              ) : (
-                <button className="btn btn-secondary" onClick={stopSpeech}>
-                  Stop Listening
+
+                <button className="icon-btn" onClick={() => copyText(reply, "Output")} title="Copy Output">
+                  <Copy size={18} />
                 </button>
-              )}
 
-              <button className="btn btn-secondary" onClick={() => copyText(prompt, "Prompt")}>
-                Copy Prompt
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => copyText(reply, "Output")}>
-                Copy Output
-              </button>
-
-              <button className="btn btn-secondary" onClick={clearChat}>
-                Clear Chat
-              </button>
+                <button className="icon-btn" onClick={clearChat} title="Clear Chat">
+                  <Trash2 size={18} />
+                </button>
+              </div>
 
               <button className="btn btn-secondary" onClick={saveThought} disabled={saving}>
                 {saving ? "Saving..." : "Save Thought"}
