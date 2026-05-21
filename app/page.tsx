@@ -543,7 +543,12 @@ ${prompt}
     setMode(selectedMode);
     askAlfred(selectedMode);
   }
-
+useEffect(() => {
+  loadKnowledge();
+  loadBusinessData();
+  loadProjects();
+  loadLeads();
+}, []);
   return (
     <main className="page">
       <div className="shell">
