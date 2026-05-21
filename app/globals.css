@@ -479,7 +479,7 @@ h1 {
   font-size: 13px;
 }
 
-/* Quick print for Alfred output */
+/* Print Styling */
 
 @media print {
   @page {
@@ -531,6 +531,21 @@ h1 {
     width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
+  }
+
+  .proposal-body h1,
+  .proposal-body h2,
+  .proposal-body h3,
+  .proposal-body table,
+  .proposal-body ul,
+  .proposal-body ol {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .proposal-body p {
+    orphans: 3;
+    widows: 3;
   }
 
   .proposal-body h1,
