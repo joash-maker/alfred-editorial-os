@@ -15,9 +15,9 @@ import {
   Send,
   BarChart3,
   Target,
-  Bookmark,
   FileText,
-Printer,
+  Printer,
+  ExternalLink,
 } from "lucide-react";
 
 type SpeechRecognitionType = {
@@ -161,7 +161,7 @@ const modePrompts: Record<Mode, string> = {
     "Act as Mediahubink's AI sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
 
   "proposal-builder":
-     "Act as Mediahubink's proposal strategist. Build a commercially sharp proposal using the current prospect, demos, offers and context. Do not invent dates. If a date is needed, write [Insert Date]. Include: executive summary, prospect problem, opportunity cost, recommended AI solution, implementation scope, timeline, pricing, ROI logic, proof assets, objections and responses, next steps and CTA. Write in British English. Keep it clear, persuasive and ready to adapt into a PDF.",
+    "Act as Mediahubink's proposal strategist. Build a commercially sharp proposal using the current prospect, demos, offers and context. Do not invent dates. If a date is needed, write [Insert Date]. Include: executive summary, prospect problem, opportunity cost, recommended AI solution, implementation scope, timeline, pricing, ROI logic, proof assets, objections and responses, next steps and CTA. Write in British English. Keep it clear, persuasive and ready to adapt into a PDF.",
 };
 
 export default function HomePage() {
@@ -227,14 +227,26 @@ export default function HomePage() {
     setSaveMessage("");
     setCopyMessage("");
   }
-function printProposal() {
-  if (!reply.trim()) {
-    setCopyMessage("Nothing to export yet.");
-    return;
+
+  function printProposal() {
+    if (!reply.trim()) {
+      setCopyMessage("Nothing to export yet.");
+      return;
+    }
+
+    window.print();
   }
 
-  window.print();
-}
+  function openProposalPage() {
+    if (!reply.trim()) {
+      setCopyMessage("Nothing to open as a proposal yet.");
+      return;
+    }
+
+    localStorage.setItem("alfredProposal", reply);
+    window.open("/proposal", "_blank");
+  }
+
   function startSpeech() {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -808,6 +820,22 @@ ${prompt}
                   <FileText size={18} />
                 </button>
 
+                <button
+                  className="icon-btn"
+                  onClick={printProposal}
+                  title="Export Proposal PDF"
+                >
+                  <Printer size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={openProposalPage}
+                  title="Open Branded Proposal"
+                >
+                  <ExternalLink size={18} />
+                </button>
+
                 {!isListening ? (
                   <button
                     className="icon-btn"
@@ -841,21 +869,7 @@ ${prompt}
                 >
                   <Copy size={18} />
                 </button>
-<button
-  className="icon-btn"
-  onClick={printProposal}
-  title="Export Proposal PDF"
->
-  <Printer size={18} />
-</button>
 
-<button
-  className="icon-btn"
-  onClick={openProposalPage}
-  title="Open Branded Proposal"
->
-  <ExternalLink size={18} />
-</button>
                 <button className="icon-btn" onClick={clearChat} title="Clear Chat">
                   <Trash2 size={18} />
                 </button>
@@ -885,8 +899,8 @@ ${prompt}
               <div className="mode" style={{ marginTop: "20px" }}>
                 <strong>Alfred says:</strong>
                 <div id="proposal-export" className="markdown-output">
-  <ReactMarkdown>{reply}</ReactMarkdown>
-</div>
+                  <ReactMarkdown>{reply}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
