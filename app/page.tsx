@@ -17,6 +17,7 @@ import {
   Target,
   Bookmark,
   FileText,
+Printer,
 } from "lucide-react";
 
 type SpeechRecognitionType = {
