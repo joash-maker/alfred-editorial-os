@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Mic, Square, Clipboard, Copy, Trash2 } from "lucide-react";
 
