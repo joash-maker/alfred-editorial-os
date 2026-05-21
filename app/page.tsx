@@ -160,7 +160,7 @@ const modePrompts: Record<Mode, string> = {
     "Act as Mediahubink's AI sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
 
   "proposal-builder":
-    "Act as Mediahubink's proposal strategist. Build a commercially sharp proposal using the current prospect, demos, offers and context. Include: executive summary, prospect problem, opportunity cost, recommended AI solution, implementation scope, timeline, pricing, ROI logic, proof assets, objections and responses, next steps and CTA. Write in British English. Keep it clear, persuasive and ready to adapt into a PDF.",
+     "Act as Mediahubink's proposal strategist. Build a commercially sharp proposal using the current prospect, demos, offers and context. Do not invent dates. If a date is needed, write [Insert Date]. Include: executive summary, prospect problem, opportunity cost, recommended AI solution, implementation scope, timeline, pricing, ROI logic, proof assets, objections and responses, next steps and CTA. Write in British English. Keep it clear, persuasive and ready to adapt into a PDF.",
 };
 
 export default function HomePage() {
