@@ -841,7 +841,13 @@ ${prompt}
                 >
                   <Copy size={18} />
                 </button>
-
+<button
+  className="icon-btn"
+  onClick={printProposal}
+  title="Export Proposal PDF"
+>
+  <Printer size={18} />
+</button>
                 <button className="icon-btn" onClick={clearChat} title="Clear Chat">
                   <Trash2 size={18} />
                 </button>
