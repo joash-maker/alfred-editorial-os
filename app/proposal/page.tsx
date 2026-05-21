@@ -33,7 +33,14 @@ export default function ProposalPage() {
         <div className="proposal-meta">
           <p><strong>Prepared by:</strong> Joash F. Perera</p>
           <p><strong>Company:</strong> Mediahubink</p>
-          <p><strong>Date:</strong> [Insert Date]</p>
+          <p>
+  <strong>Date:</strong>{" "}
+  {new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })}
+</p>
           <p><strong>Status:</strong> Confidential</p>
         </div>
       </section>
