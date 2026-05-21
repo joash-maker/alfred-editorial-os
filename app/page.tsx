@@ -2,7 +2,22 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Mic, Square, Clipboard, Copy, Trash2 } from "lucide-react";
+import {
+  Mic,
+  Square,
+  Clipboard,
+  Copy,
+  Trash2,
+  PenSquare,
+  Briefcase,
+  Search,
+  Megaphone,
+  Send,
+  BarChart3,
+  Target,
+  Bookmark,
+  FileText,
+} from "lucide-react";
 
 type SpeechRecognitionType = {
   continuous: boolean;
@@ -110,7 +125,8 @@ type Mode =
   | "campaign-weekly"
   | "prospect-outreach"
   | "metrics-review"
-  | "lead-operator";
+  | "lead-operator"
+  | "proposal-builder";
 
 const modePrompts: Record<Mode, string> = {
   general:
@@ -142,6 +158,9 @@ const modePrompts: Record<Mode, string> = {
 
   "lead-operator":
     "Act as Mediahubink's AI sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
+
+  "proposal-builder":
+    "Act as Mediahubink's proposal strategist. Build a commercially sharp proposal using the current prospect, demos, offers and context. Include: executive summary, prospect problem, opportunity cost, recommended AI solution, implementation scope, timeline, pricing, ROI logic, proof assets, objections and responses, next steps and CTA. Write in British English. Keep it clear, persuasive and ready to adapt into a PDF.",
 };
 
 export default function HomePage() {
@@ -615,7 +634,7 @@ ${prompt}
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Paste a company URL, LinkedIn profile, prospect note, campaign result, or content idea."
+              placeholder="Example: Build a proposal for Woodley Dentist using Fredi Capture and optional Capture+."
             />
 
             <div className="mode-grid">
@@ -634,86 +653,184 @@ ${prompt}
                 <span>Short, thoughtful post for Substack Notes.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("vertical-campaign")}>
+              <button
+                className="mode"
+                onClick={() => setMode("vertical-campaign")}
+              >
                 <strong>Vertical Campaign</strong>
                 <span>5-post campaign for one target industry.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("prospect-intelligence")}>
+              <button
+                className="mode"
+                onClick={() => setMode("prospect-intelligence")}
+              >
                 <strong>Prospect Intelligence</strong>
                 <span>Analyse a company, profile or opportunity.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("campaign-weekly")}>
+              <button
+                className="mode"
+                onClick={() => setMode("campaign-weekly")}
+              >
                 <strong>Campaign Weekly</strong>
                 <span>Plan posts, demos, outreach and weekly reflection.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("prospect-outreach")}>
+              <button
+                className="mode"
+                onClick={() => setMode("prospect-outreach")}
+              >
                 <strong>Prospect Outreach</strong>
                 <span>Create DMs, emails and follow-up sequences.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("metrics-review")}>
+              <button
+                className="mode"
+                onClick={() => setMode("metrics-review")}
+              >
                 <strong>Metrics Review</strong>
                 <span>Review results and decide what to adjust next.</span>
               </button>
 
-              <button className="mode" onClick={() => setMode("lead-operator")}>
+              <button
+                className="mode"
+                onClick={() => setMode("lead-operator")}
+              >
                 <strong>Lead Operator</strong>
                 <span>Prioritise CRM leads and decide who to chase next.</span>
+              </button>
+
+              <button
+                className="mode"
+                onClick={() => setMode("proposal-builder")}
+              >
+                <strong>Proposal Builder</strong>
+                <span>Create proposal-ready scopes, pricing and CTAs.</span>
               </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
-              <button className="btn" onClick={() => askAlfred()} disabled={loading}>
+              <button
+                className="btn"
+                onClick={() => askAlfred()}
+                disabled={loading}
+              >
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
               </button>
 
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("creative-desk")} disabled={loading}>
-                Creative Desk
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("linkedin-lead")} disabled={loading}>
-                LinkedIn
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("prospect-intelligence")} disabled={loading}>
-                Prospect Intel
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("campaign-weekly")} disabled={loading}>
-                Campaign
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("prospect-outreach")} disabled={loading}>
-                Outreach
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("metrics-review")} disabled={loading}>
-                Metrics
-              </button>
-
-              <button className="btn btn-secondary" onClick={() => setModeAndAsk("lead-operator")} disabled={loading}>
-                Lead Operator
+              <button
+                className="btn btn-secondary"
+                onClick={saveThought}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save Thought"}
               </button>
 
               <div className="icon-actions">
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("creative-desk")}
+                  disabled={loading}
+                  title="Creative Desk"
+                >
+                  <PenSquare size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("linkedin-lead")}
+                  disabled={loading}
+                  title="LinkedIn Lead Post"
+                >
+                  <Briefcase size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("prospect-intelligence")}
+                  disabled={loading}
+                  title="Prospect Intelligence"
+                >
+                  <Search size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("campaign-weekly")}
+                  disabled={loading}
+                  title="Campaign Weekly"
+                >
+                  <Megaphone size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("prospect-outreach")}
+                  disabled={loading}
+                  title="Prospect Outreach"
+                >
+                  <Send size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("metrics-review")}
+                  disabled={loading}
+                  title="Metrics Review"
+                >
+                  <BarChart3 size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("lead-operator")}
+                  disabled={loading}
+                  title="Lead Operator"
+                >
+                  <Target size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("proposal-builder")}
+                  disabled={loading}
+                  title="Proposal Builder"
+                >
+                  <FileText size={18} />
+                </button>
+
                 {!isListening ? (
-                  <button className="icon-btn" onClick={startSpeech} title="Tap to Speak">
+                  <button
+                    className="icon-btn"
+                    onClick={startSpeech}
+                    title="Tap to Speak"
+                  >
                     <Mic size={18} />
                   </button>
                 ) : (
-                  <button className="icon-btn listening" onClick={stopSpeech} title="Stop Listening">
+                  <button
+                    className="icon-btn listening"
+                    onClick={stopSpeech}
+                    title="Stop Listening"
+                  >
                     <Square size={18} />
                   </button>
                 )}
 
-                <button className="icon-btn" onClick={() => copyText(prompt, "Prompt")} title="Copy Prompt">
+                <button
+                  className="icon-btn"
+                  onClick={() => copyText(prompt, "Prompt")}
+                  title="Copy Prompt"
+                >
                   <Clipboard size={18} />
                 </button>
 
-                <button className="icon-btn" onClick={() => copyText(reply, "Output")} title="Copy Output">
+                <button
+                  className="icon-btn"
+                  onClick={() => copyText(reply, "Output")}
+                  title="Copy Output"
+                >
                   <Copy size={18} />
                 </button>
 
@@ -721,10 +838,6 @@ ${prompt}
                   <Trash2 size={18} />
                 </button>
               </div>
-
-              <button className="btn btn-secondary" onClick={saveThought} disabled={saving}>
-                {saving ? "Saving..." : "Save Thought"}
-              </button>
             </div>
 
             <p style={{ color: "#a3a3a3", marginTop: "14px", fontSize: "14px" }}>
@@ -761,7 +874,11 @@ ${prompt}
           <div className="panel-title">Project / Demo Manager</div>
 
           <div className="actions" style={{ marginBottom: "18px" }}>
-            <button className="btn btn-secondary" onClick={loadProjects} disabled={loadingProjects}>
+            <button
+              className="btn btn-secondary"
+              onClick={loadProjects}
+              disabled={loadingProjects}
+            >
               {loadingProjects ? "Loading..." : "Load Projects"}
             </button>
           </div>
@@ -809,60 +926,14 @@ ${prompt}
           <div className="panel-title">CRM-lite</div>
 
           <div className="mode-grid">
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadName}
-              onChange={(e) => setLeadName(e.target.value)}
-              placeholder="Contact name"
-            />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadName} onChange={(e) => setLeadName(e.target.value)} placeholder="Contact name" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadCompany} onChange={(e) => setLeadCompany(e.target.value)} placeholder="Company" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} placeholder="Email" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} placeholder="Phone" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadIndustry} onChange={(e) => setLeadIndustry(e.target.value)} placeholder="Industry" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi, voice agent, demo" />
 
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadCompany}
-              onChange={(e) => setLeadCompany(e.target.value)}
-              placeholder="Company"
-            />
-
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadEmail}
-              onChange={(e) => setLeadEmail(e.target.value)}
-              placeholder="Email"
-            />
-
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadPhone}
-              onChange={(e) => setLeadPhone(e.target.value)}
-              placeholder="Phone"
-            />
-
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadIndustry}
-              onChange={(e) => setLeadIndustry(e.target.value)}
-              placeholder="Industry"
-            />
-
-            <input
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadInterest}
-              onChange={(e) => setLeadInterest(e.target.value)}
-              placeholder="Interest, e.g. Fredi, voice agent, demo"
-            />
-
-            <select
-              className="input-box"
-              style={{ minHeight: "52px" }}
-              value={leadStage}
-              onChange={(e) => setLeadStage(e.target.value)}
-            >
+            <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
               <option value="new">New</option>
               <option value="contacted">Contacted</option>
               <option value="demo-interest">Demo Interest</option>
@@ -871,12 +942,7 @@ ${prompt}
               <option value="lost">Lost</option>
             </select>
 
-            <textarea
-              className="input-box"
-              value={leadNotes}
-              onChange={(e) => setLeadNotes(e.target.value)}
-              placeholder="Notes"
-            />
+            <textarea className="input-box" value={leadNotes} onChange={(e) => setLeadNotes(e.target.value)} placeholder="Notes" />
           </div>
 
           <div className="actions" style={{ marginTop: "18px" }}>
@@ -958,9 +1024,7 @@ ${prompt}
             <div className="mode-grid">
               {knowledge.map((item) => (
                 <div className="mode" key={item.id}>
-                  <strong>
-                    {item.category}: {item.title}
-                  </strong>
+                  <strong>{item.category}: {item.title}</strong>
                   <span>{item.content}</span>
                 </div>
               ))}
