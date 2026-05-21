@@ -876,9 +876,9 @@ ${prompt}
             {reply && (
               <div className="mode" style={{ marginTop: "20px" }}>
                 <strong>Alfred says:</strong>
-                <div className="markdown-output">
-                  <ReactMarkdown>{reply}</ReactMarkdown>
-                </div>
+                <div id="proposal-export" className="markdown-output">
+  <ReactMarkdown>{reply}</ReactMarkdown>
+</div>
               </div>
             )}
           </div>
