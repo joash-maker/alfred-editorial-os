@@ -328,3 +328,33 @@ h1 {
     font-size: 17px;
   }
 }
+.icon-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.icon-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid #333;
+  background: #111;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #1a1a1a;
+  border-color: #555;
+}
+
+.icon-btn.listening {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #050505;
+}
