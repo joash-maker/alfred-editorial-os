@@ -302,6 +302,307 @@ h1 {
   margin: 22px 0;
 }
 
+.icon-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  background: #0d0d0d;
+  border: 1px solid #262626;
+  border-radius: 999px;
+  padding: 6px;
+  flex-wrap: wrap;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #333;
+  background: #111;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #1a1a1a;
+  border-color: #555;
+}
+
+.icon-btn.listening {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #050505;
+}
+
+/* Premium Proposal Page */
+
+.proposal-page {
+  min-height: 100vh;
+  background: #f5f5f0;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 40px;
+}
+
+.proposal-cover {
+  background: #050505;
+  color: #fff;
+  border-radius: 28px;
+  padding: 48px;
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 40px;
+  margin-bottom: 28px;
+}
+
+.proposal-kicker {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  font-weight: 800;
+  color: #c9c9c9;
+  margin: 0 0 20px;
+}
+
+.proposal-cover h1 {
+  font-size: clamp(48px, 8vw, 96px);
+  line-height: 0.9;
+  margin: 0 0 24px;
+  letter-spacing: -0.07em;
+}
+
+.proposal-subtitle {
+  max-width: 620px;
+  font-size: 20px;
+  line-height: 1.5;
+  color: #d4d4d4;
+}
+
+.proposal-meta {
+  border: 1px solid #333;
+  border-radius: 20px;
+  padding: 22px;
+  background: rgba(255,255,255,0.05);
+  align-self: end;
+}
+
+.proposal-meta p {
+  margin: 0 0 10px;
+  color: #e5e5e5;
+  font-size: 14px;
+}
+
+.proposal-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 22px;
+}
+
+.proposal-toolbar button {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 800;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.proposal-body {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 24px;
+  padding: 44px;
+  max-width: 980px;
+  margin: 0 auto;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.08);
+}
+
+.proposal-body h1,
+.proposal-body h2,
+.proposal-body h3 {
+  color: #111;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.proposal-body h1 {
+  font-size: 38px;
+}
+
+.proposal-body h2 {
+  font-size: 26px;
+  margin-top: 34px;
+  border-top: 1px solid #ddd;
+  padding-top: 24px;
+}
+
+.proposal-body h3 {
+  font-size: 20px;
+  margin-top: 24px;
+}
+
+.proposal-body p,
+.proposal-body li {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.proposal-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+}
+
+.proposal-body th,
+.proposal-body td {
+  border: 1px solid #d0d0d0;
+  padding: 10px;
+  text-align: left;
+}
+
+.proposal-body th {
+  background: #f1f1f1;
+}
+
+.proposal-footer {
+  max-width: 980px;
+  margin: 28px auto 0;
+  display: flex;
+  justify-content: space-between;
+  color: #555;
+  font-size: 13px;
+}
+
+/* Quick print for Alfred output */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 18mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  .proposal-toolbar {
+    display: none !important;
+  }
+
+  .proposal-page {
+    background: #ffffff !important;
+    color: #111111 !important;
+    padding: 0 !important;
+  }
+
+  .proposal-cover {
+    background: #050505 !important;
+    color: #ffffff !important;
+    border-radius: 0 !important;
+    margin: 0 0 24px 0 !important;
+    padding: 32px !important;
+    display: block !important;
+    page-break-after: always;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .proposal-cover h1,
+  .proposal-cover p,
+  .proposal-meta p {
+    color: #ffffff !important;
+  }
+
+  .proposal-body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .proposal-body h1,
+  .proposal-body h2,
+  .proposal-body h3,
+  .proposal-body p,
+  .proposal-body li,
+  .proposal-body td,
+  .proposal-body th {
+    color: #111111 !important;
+  }
+
+  .proposal-body table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: avoid;
+  }
+
+  .proposal-body th,
+  .proposal-body td {
+    border: 1px solid #cccccc !important;
+    padding: 8px !important;
+  }
+
+  .proposal-footer {
+    color: #555555 !important;
+    padding: 24px 0 0 0 !important;
+  }
+
+  body:not(:has(.proposal-page)) * {
+    visibility: hidden;
+  }
+
+  body:not(:has(.proposal-page)) #proposal-export,
+  body:not(:has(.proposal-page)) #proposal-export * {
+    visibility: visible;
+  }
+
+  body:not(:has(.proposal-page)) #proposal-export {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    background: #ffffff;
+    color: #111111;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  body:not(:has(.proposal-page)) #proposal-export h1,
+  body:not(:has(.proposal-page)) #proposal-export h2,
+  body:not(:has(.proposal-page)) #proposal-export h3,
+  body:not(:has(.proposal-page)) #proposal-export p,
+  body:not(:has(.proposal-page)) #proposal-export li,
+  body:not(:has(.proposal-page)) #proposal-export td,
+  body:not(:has(.proposal-page)) #proposal-export th {
+    color: #111111 !important;
+  }
+
+  body:not(:has(.proposal-page)) #proposal-export table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  body:not(:has(.proposal-page)) #proposal-export th,
+  body:not(:has(.proposal-page)) #proposal-export td {
+    border: 1px solid #cccccc;
+    padding: 8px;
+  }
+}
+
 @media (max-width: 860px) {
   .page {
     padding: 18px;
@@ -328,131 +629,23 @@ h1 {
     font-size: 17px;
   }
 }
-.icon-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
 
-.icon-btn {
-  width: 46px;
-  height: 46px;
-  border-radius: 999px;
-  border: 1px solid #333;
-  background: #111;
-  color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.icon-btn:hover {
-  background: #1a1a1a;
-  border-color: #555;
-}
-
-.icon-btn.listening {
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #050505;
-}
-.icon-actions {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  background: #0d0d0d;
-  border: 1px solid #262626;
-  border-radius: 999px;
-  padding: 6px;
-}
-
-.icon-btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-}
-.icon-actions {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  background: #0d0d0d;
-  border: 1px solid #262626;
-  border-radius: 999px;
-  padding: 6px;
-  flex-wrap: wrap;
-}
-
-.icon-btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid #333;
-  background: #111;
-  color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.icon-btn:hover {
-  background: #1a1a1a;
-  border-color: #555;
-}
-
-.icon-btn.listening {
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #050505;
-}
-@media print {
-  body {
-    background: #ffffff !important;
-    color: #111111 !important;
+@media (max-width: 800px) {
+  .proposal-page {
+    padding: 18px;
   }
 
-  body * {
-    visibility: hidden;
+  .proposal-cover {
+    grid-template-columns: 1fr;
+    padding: 30px;
   }
 
-  #proposal-export,
-  #proposal-export * {
-    visibility: visible;
+  .proposal-body {
+    padding: 26px;
   }
 
-  #proposal-export {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 40px;
-    background: #ffffff;
-    color: #111111;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-
-  #proposal-export h1,
-  #proposal-export h2,
-  #proposal-export h3,
-  #proposal-export p,
-  #proposal-export li,
-  #proposal-export td,
-  #proposal-export th {
-    color: #111111 !important;
-  }
-
-  #proposal-export table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  #proposal-export th,
-  #proposal-export td {
-    border: 1px solid #cccccc;
-    padding: 8px;
+  .proposal-footer {
+    flex-direction: column;
+    gap: 8px;
   }
 }
