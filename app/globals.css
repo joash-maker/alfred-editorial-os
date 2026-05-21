@@ -408,3 +408,51 @@ h1 {
   background: #ffffff;
   color: #050505;
 }
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #proposal-export,
+  #proposal-export * {
+    visibility: visible;
+  }
+
+  #proposal-export {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 40px;
+    background: #ffffff;
+    color: #111111;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  #proposal-export h1,
+  #proposal-export h2,
+  #proposal-export h3,
+  #proposal-export p,
+  #proposal-export li,
+  #proposal-export td,
+  #proposal-export th {
+    color: #111111 !important;
+  }
+
+  #proposal-export table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #proposal-export th,
+  #proposal-export td {
+    border: 1px solid #cccccc;
+    padding: 8px;
+  }
+}
