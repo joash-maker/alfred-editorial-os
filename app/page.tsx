@@ -144,7 +144,9 @@ export default function HomePage() {
   const [saveMessage, setSaveMessage] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(null);
+  const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(
+    null
+  );
 
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [loadingThoughts, setLoadingThoughts] = useState(false);
@@ -253,17 +255,23 @@ export default function HomePage() {
 
     const demoContext =
       demos.length > 0
-        ? demos.map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`).join("\n")
+        ? demos
+            .map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`)
+            .join("\n")
         : "Context still loading...";
 
     const offerContext =
       offers.length > 0
-        ? offers.map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`).join("\n")
+        ? offers
+            .map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`)
+            .join("\n")
         : "Context still loading...";
 
     const knowledgeContext =
       knowledge.length > 0
-        ? knowledge.map((k) => `${k.category} - ${k.title}: ${k.content}`).join("\n")
+        ? knowledge
+            .map((k) => `${k.category} - ${k.title}: ${k.content}`)
+            .join("\n")
         : "Context still loading...";
 
     const leadContext =
@@ -273,7 +281,9 @@ export default function HomePage() {
               (l) =>
                 `${l.company || l.name || "Unnamed lead"} | ${
                   l.industry || "No industry"
-                } | ${l.interest || "No interest"} | Stage: ${l.stage || "new"}`
+                } | ${l.interest || "No interest"} | Stage: ${
+                  l.stage || "new"
+                }`
             )
             .join("\n")
         : "No leads loaded.";
@@ -566,12 +576,24 @@ ${prompt}
             </p>
 
             <div className="actions">
-              <a className="btn" href="#quick-create">Open Quick Create</a>
-              <a className="btn btn-secondary" href="#projects">View Projects</a>
-              <a className="btn btn-secondary" href="#knowledge">View Knowledge</a>
-              <a className="btn btn-secondary" href="#business">View Demos</a>
-              <a className="btn btn-secondary" href="#crm">View CRM</a>
-              <a className="btn btn-secondary" href="#memory">View Memory</a>
+              <a className="btn" href="#quick-create">
+                Open Quick Create
+              </a>
+              <a className="btn btn-secondary" href="#projects">
+                View Projects
+              </a>
+              <a className="btn btn-secondary" href="#knowledge">
+                View Knowledge
+              </a>
+              <a className="btn btn-secondary" href="#business">
+                View Demos
+              </a>
+              <a className="btn btn-secondary" href="#crm">
+                View CRM
+              </a>
+              <a className="btn btn-secondary" href="#memory">
+                View Memory
+              </a>
             </div>
           </div>
 
@@ -715,7 +737,311 @@ ${prompt}
           </div>
         </section>
 
-        {/* Your existing lower sections continue here unchanged */}
+        <section className="card" id="projects" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Project / Demo Manager</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadProjects} disabled={loadingProjects}>
+              {loadingProjects ? "Loading..." : "Load Projects"}
+            </button>
+          </div>
+
+          {projectMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{projectMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "0" }}>
+            <div className="mini-card">
+              <h3>Projects Loaded</h3>
+              <p>{projects.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Purpose</h3>
+              <p>Keep your demos, builds and proof assets visible.</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Use In Prompts</h3>
+              <p>Loaded projects are passed to Alfred when generating responses.</p>
+            </div>
+          </div>
+
+          {projects.length > 0 && (
+            <div className="mode-grid" style={{ marginTop: "18px" }}>
+              {projects.map((project) => (
+                <div className="mode" key={project.id}>
+                  <strong>{project.name}</strong>
+                  <span>{project.category || "No category"}</span>
+                  <span>{project.audience || "No audience"}</span>
+                  <span>{project.url || "No URL"}</span>
+                  <span>{project.description || ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card" id="crm" style={{ marginTop: "28px" }}>
+          <div className="panel-title">CRM-lite</div>
+
+          <div className="mode-grid">
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadName}
+              onChange={(e) => setLeadName(e.target.value)}
+              placeholder="Contact name"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadCompany}
+              onChange={(e) => setLeadCompany(e.target.value)}
+              placeholder="Company"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadEmail}
+              onChange={(e) => setLeadEmail(e.target.value)}
+              placeholder="Email"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadPhone}
+              onChange={(e) => setLeadPhone(e.target.value)}
+              placeholder="Phone"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadIndustry}
+              onChange={(e) => setLeadIndustry(e.target.value)}
+              placeholder="Industry"
+            />
+
+            <input
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadInterest}
+              onChange={(e) => setLeadInterest(e.target.value)}
+              placeholder="Interest, e.g. Fredi, voice agent, demo"
+            />
+
+            <select
+              className="input-box"
+              style={{ minHeight: "52px" }}
+              value={leadStage}
+              onChange={(e) => setLeadStage(e.target.value)}
+            >
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="demo-interest">Demo Interest</option>
+              <option value="proposal">Proposal</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+
+            <textarea
+              className="input-box"
+              value={leadNotes}
+              onChange={(e) => setLeadNotes(e.target.value)}
+              placeholder="Notes"
+            />
+          </div>
+
+          <div className="actions" style={{ marginTop: "18px" }}>
+            <button className="btn" onClick={saveLead} disabled={savingLead}>
+              {savingLead ? "Saving lead..." : "Save Lead"}
+            </button>
+
+            <button className="btn btn-secondary" onClick={loadLeads} disabled={loadingLeads}>
+              {loadingLeads ? "Loading..." : "Load Leads"}
+            </button>
+          </div>
+
+          {leadMessage && (
+            <div className="mode" style={{ marginTop: "18px" }}>
+              <strong>Status:</strong>
+              <span>{leadMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "18px" }}>
+            <div className="mini-card">
+              <h3>Leads Loaded</h3>
+              <p>{leads.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Purpose</h3>
+              <p>Track prospects, demo interest and follow-up conversations.</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Next Upgrade</h3>
+              <p>Add follow-up dates and Alfred reminders.</p>
+            </div>
+          </div>
+
+          {leads.length > 0 && (
+            <div className="mode-grid" style={{ marginTop: "18px" }}>
+              {leads.map((lead) => (
+                <div className="mode" key={lead.id}>
+                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                  <span>Contact: {lead.name || "Not added"}</span>
+                  <span>Email: {lead.email || "Not added"}</span>
+                  <span>Phone: {lead.phone || "Not added"}</span>
+                  <span>Industry: {lead.industry || "Not added"}</span>
+                  <span>Interest: {lead.interest || "Not added"}</span>
+                  <span>Stage: {lead.stage || "new"}</span>
+                  <span>{lead.notes || ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card" id="knowledge" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Knowledge Vault</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadKnowledge} disabled={loadingKnowledge}>
+              {loadingKnowledge ? "Loading..." : "Load Knowledge"}
+            </button>
+          </div>
+
+          {knowledgeMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{knowledgeMessage}</span>
+            </div>
+          )}
+
+          {knowledge.length === 0 ? (
+            <p className="lead" style={{ fontSize: "16px" }}>
+              No knowledge loaded yet.
+            </p>
+          ) : (
+            <div className="mode-grid">
+              {knowledge.map((item) => (
+                <div className="mode" key={item.id}>
+                  <strong>
+                    {item.category}: {item.title}
+                  </strong>
+                  <span>{item.content}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card" id="business" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Demo Manager + Offer Engine</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadBusinessData} disabled={loadingBusinessData}>
+              {loadingBusinessData ? "Loading..." : "Load Demos + Offers"}
+            </button>
+          </div>
+
+          {businessMessage && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{businessMessage}</span>
+            </div>
+          )}
+
+          <div className="section" style={{ marginTop: "0" }}>
+            <div className="mini-card">
+              <h3>Demos Loaded</h3>
+              <p>{demos.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Offers Loaded</h3>
+              <p>{offers.length}</p>
+            </div>
+
+            <div className="mini-card">
+              <h3>Use In Prompts</h3>
+              <p>Loaded demos and offers are passed to Alfred when generating posts.</p>
+            </div>
+          </div>
+
+          {demos.length > 0 && (
+            <>
+              <div className="panel-title" style={{ marginTop: "24px" }}>
+                Demo Links
+              </div>
+
+              <div className="mode-grid">
+                {demos.map((demo) => (
+                  <div className="mode" key={demo.id}>
+                    <strong>{demo.vertical}</strong>
+                    <span>{demo.demo_url}</span>
+                    <span>{demo.cta}</span>
+                    <span>{demo.notes}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {offers.length > 0 && (
+            <>
+              <div className="panel-title" style={{ marginTop: "24px" }}>
+                Offers
+              </div>
+
+              <div className="mode-grid">
+                {offers.map((offer) => (
+                  <div className="mode" key={offer.id}>
+                    <strong>{offer.name}</strong>
+                    <span>{offer.offer_type}</span>
+                    <span>{offer.price}</span>
+                    <span>{offer.description}</span>
+                    <span>{offer.cta}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="card" id="memory" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Alfred’s Memory</div>
+
+          <div className="actions" style={{ marginBottom: "18px" }}>
+            <button className="btn btn-secondary" onClick={loadThoughts} disabled={loadingThoughts}>
+              {loadingThoughts ? "Loading..." : "Refresh Memory"}
+            </button>
+          </div>
+
+          {thoughts.length === 0 ? (
+            <p className="lead" style={{ fontSize: "16px" }}>
+              No thoughts loaded yet. Save a thought, then refresh memory.
+            </p>
+          ) : (
+            <div className="mode-grid">
+              {thoughts.map((thought) => (
+                <div className="mode" key={thought.id}>
+                  <strong>{thought.title || "Untitled thought"}</strong>
+                  <span>{thought.content}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
