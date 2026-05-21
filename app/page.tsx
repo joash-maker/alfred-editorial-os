@@ -227,7 +227,14 @@ export default function HomePage() {
     setSaveMessage("");
     setCopyMessage("");
   }
+function printProposal() {
+  if (!reply.trim()) {
+    setCopyMessage("Nothing to export yet.");
+    return;
+  }
 
+  window.print();
+}
   function startSpeech() {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
