@@ -125,6 +125,15 @@ const modePrompts: Record<Mode, string> = {
 
   "prospect-intelligence":
     "Act as Mediahubink's commercial intelligence strategist. Analyse the prospect information provided. If only a URL is provided, do not pretend to visit it, but still produce a useful first-pass brief based on the URL, domain clues, industry assumptions and current Mediahubink context. Clearly label assumptions. Always include: 1) Safe assumptions, 2) What to verify, 3) likely pain points, 4) missed revenue or operational gaps, 5) best-fit Mediahubink offer, 6) best relevant demo or project, 7) strongest outreach angle, 8) likely objections, 9) LinkedIn DM with placeholders, 10) email draft with placeholders, 11) next action. Be commercially sharp, practical and persuasive. Use British English. Never fabricate specific facts.",
+
+  "campaign-weekly":
+    "Act as Alfred, Mediahubink's campaign chief of staff. Build a weekly campaign plan using the current projects, demos, offers, leads and knowledge loaded into context. Include: weekly objective, target vertical, key offer, best demo to push, 5 LinkedIn post ideas, 3 Substack Notes, outreach actions, CRM actions, daily schedule, CTA strategy, and Friday reflection prompt. Keep it practical, focused and commercially useful.",
+
+  "prospect-outreach":
+    "Act as Mediahubink's outreach strategist. Generate a warm, specific, low-pressure outreach sequence for the prospect or vertical provided. Include: pain point analysis, best-fit offer, best demo link or project to reference, LinkedIn connection request, Day 3 follow-up, Day 7 value-add message, Day 10 final nudge, optional email draft, likely objections and suggested replies. Use Joash's tone: direct, warm, British English, no corporate waffle.",
+
+  "metrics-review":
+    "Act as Alfred, Mediahubink's campaign analyst. Review the metrics, campaign notes or weekly reflection provided. Identify what worked, what underperformed, likely reasons, strongest vertical, best content angle, CRM implications, next week's recommendation, what to stop, what to double down on, and one clear action plan. Be honest, practical and commercially focused.",
 };
 
 export default function HomePage() {
@@ -247,18 +256,14 @@ export default function HomePage() {
     const demoContext =
       demos.length > 0
         ? demos
-            .map(
-              (d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`
-            )
+            .map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`)
             .join("\n")
         : "No demo links loaded.";
 
     const offerContext =
       offers.length > 0
         ? offers
-            .map(
-              (o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`
-            )
+            .map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`)
             .join("\n")
         : "No offers loaded.";
 
@@ -556,9 +561,7 @@ ${prompt}
         <section className="hero">
           <div className="card">
             <div className="kicker">The Creative Desk · Mediahubink</div>
-
             <h1>Your ideas, turned into clear publishing momentum.</h1>
-
             <p className="lead">
               Alfred helps capture what you are building, learning, testing and
               sharing, then turns it into Substack posts, LinkedIn content,
@@ -582,7 +585,7 @@ ${prompt}
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Paste a company URL, LinkedIn profile, prospect note, or content idea."
+              placeholder="Example: Paste a company URL, LinkedIn profile, prospect note, campaign result, or content idea."
             />
 
             <div className="mode-grid">
@@ -610,6 +613,21 @@ ${prompt}
                 <strong>Prospect Intelligence</strong>
                 <span>Analyse a company, profile or opportunity.</span>
               </button>
+
+              <button className="mode" onClick={() => setMode("campaign-weekly")}>
+                <strong>Campaign Weekly</strong>
+                <span>Plan posts, demos, outreach and weekly reflection.</span>
+              </button>
+
+              <button className="mode" onClick={() => setMode("prospect-outreach")}>
+                <strong>Prospect Outreach</strong>
+                <span>Create DMs, emails and follow-up sequences.</span>
+              </button>
+
+              <button className="mode" onClick={() => setMode("metrics-review")}>
+                <strong>Metrics Review</strong>
+                <span>Review results and decide what to adjust next.</span>
+              </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
@@ -627,6 +645,18 @@ ${prompt}
 
               <button className="btn btn-secondary" onClick={() => setModeAndAsk("prospect-intelligence")} disabled={loading}>
                 Prospect Intel
+              </button>
+
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("campaign-weekly")} disabled={loading}>
+                Campaign
+              </button>
+
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("prospect-outreach")} disabled={loading}>
+                Outreach
+              </button>
+
+              <button className="btn btn-secondary" onClick={() => setModeAndAsk("metrics-review")} disabled={loading}>
+                Metrics
               </button>
 
               <div className="icon-actions">
@@ -709,12 +739,10 @@ ${prompt}
               <h3>Projects Loaded</h3>
               <p>{projects.length}</p>
             </div>
-
             <div className="mini-card">
               <h3>Purpose</h3>
               <p>Keep your demos, builds and proof assets visible.</p>
             </div>
-
             <div className="mini-card">
               <h3>Use In Prompts</h3>
               <p>Loaded projects are passed to Alfred when generating responses.</p>
@@ -763,7 +791,6 @@ ${prompt}
             <button className="btn" onClick={saveLead} disabled={savingLead}>
               {savingLead ? "Saving lead..." : "Save Lead"}
             </button>
-
             <button className="btn btn-secondary" onClick={loadLeads} disabled={loadingLeads}>
               {loadingLeads ? "Loading..." : "Load Leads"}
             </button>
@@ -781,12 +808,10 @@ ${prompt}
               <h3>Leads Loaded</h3>
               <p>{leads.length}</p>
             </div>
-
             <div className="mini-card">
               <h3>Purpose</h3>
               <p>Track prospects, demo interest and follow-up conversations.</p>
             </div>
-
             <div className="mini-card">
               <h3>Next Upgrade</h3>
               <p>Add follow-up dates and Alfred reminders.</p>
@@ -864,12 +889,10 @@ ${prompt}
               <h3>Demos Loaded</h3>
               <p>{demos.length}</p>
             </div>
-
             <div className="mini-card">
               <h3>Offers Loaded</h3>
               <p>{offers.length}</p>
             </div>
-
             <div className="mini-card">
               <h3>Use In Prompts</h3>
               <p>Loaded demos and offers are passed to Alfred when generating posts.</p>
@@ -881,7 +904,6 @@ ${prompt}
               <div className="panel-title" style={{ marginTop: "24px" }}>
                 Demo Links
               </div>
-
               <div className="mode-grid">
                 {demos.map((demo) => (
                   <div className="mode" key={demo.id}>
@@ -900,7 +922,6 @@ ${prompt}
               <div className="panel-title" style={{ marginTop: "24px" }}>
                 Offers
               </div>
-
               <div className="mode-grid">
                 {offers.map((offer) => (
                   <div className="mode" key={offer.id}>
