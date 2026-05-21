@@ -8,9 +8,12 @@ export default function ProposalPage() {
   const [proposal, setProposal] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("alfredProposal");
-    setProposal(saved || "");
-  }, []);
+  const saved =
+    localStorage.getItem("alfredProposal") ||
+    sessionStorage.getItem("alfredProposal");
+
+  setProposal(saved || "");
+}, []);
 
   function printProposal() {
     window.print();
