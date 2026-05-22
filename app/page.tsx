@@ -131,6 +131,9 @@ type Mode =
   | "service-agreement";
 
 const modePrompts: Record<Mode, string> = {
+  /* EMAIL ROUTING RULE:
+- Use info@mediahubink.com for proposals, service agreements, payment documents and invoices
+- Use hello@mediahubink.com for outreach, social posts, thought leadership and non-formal content */
   general:
     "Respond as Alfred, Joash's commercial chief of staff for Mediahubink. Be calm, clear, useful and commercially aware.",
 
@@ -199,6 +202,22 @@ STRUCTURE:
 9. Next steps
 10. CTA
 
+FORMAL DOCUMENT DETAILS:
+Use info@mediahubink.com for formal proposal contact details.
+Use this provider identity block in formal proposals where appropriate:
+
+Mediahubink Limited
+7 Tileyard North
+Wakefield
+WF1 5FY
+United Kingdom
+
+info@mediahubink.com
+07764 182758
+https://www.mediahubink.com
+
+Company No. 17218602
+
 STYLE:
 - Calm
 - Premium
@@ -232,10 +251,27 @@ STRICT RULES:
 - No legal theatre
 
 DEFAULT PROVIDER DETAILS:
-Provider: Mediahubink
-Founder: Joash F. Perera
-Website: https://www.mediahubink.com
-Booking link: https://calendar.app.google/e7e8NMLiRnajNFHo9
+Use info@mediahubink.com for this service agreement and all formal service documents.
+Provider:
+Mediahubink Limited
+Company No. 17218602
+
+Registered office:
+7 Tileyard North
+Wakefield
+WF1 5FY
+United Kingdom
+
+Primary contact:
+Joash F. Perera
+info@mediahubink.com
+07764 182758
+
+Website:
+https://www.mediahubink.com
+
+Booking:
+https://calendar.app.google/e7e8NMLiRnajNFHo9
 
 DEFAULT TERMS:
 - Governing law: England and Wales
