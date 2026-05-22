@@ -581,7 +581,12 @@ ${prompt}
     const agreementPrompt = `
 Create a service agreement from the proposal below.
 
-Use the proposal to extract:
+Use the proposal to extract commercial details.
+
+If the proposal does not explicitly define commitment length, use Mediahubink default:
+Minimum commitment: 3 months
+
+Extract:
 - client name
 - offer name
 - service scope
