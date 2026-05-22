@@ -256,6 +256,33 @@ STRICT RULES:
 - No hype
 - No fluff
 - No legal theatre
+- NEVER output markdown tables
+- NEVER use pipe table formatting
+- Present pricing and support terms as bullet lists only
+- NEVER invent dates
+- ALWAYS use this exact date:
+${new Date().toLocaleDateString("en-GB", {
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+})}
+- Use this exact agreement date structure:
+  Agreement issue date: ${new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })}
+  Execution date: To be completed on signature
+- Never replace the issue date with year only
+- Keep agreement between 1,500 and 2,200 words
+- Complete every clause fully
+- Never stop mid-sentence
+- NEVER invent agreement reference numbers
+- If no agreement reference is supplied, use: Agreement reference: To be assigned
+- Do not abbreviate provider identity
+- Use full legal provider details exactly as supplied
+- MANDATORY FINAL SECTION: Acceptance and signature block
+- The agreement is invalid without signatures
 
 DEFAULT PROVIDER DETAILS:
 Use info@mediahubink.com for this service agreement and all formal service documents.
