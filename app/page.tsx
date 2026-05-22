@@ -181,7 +181,10 @@ ${new Date().toLocaleDateString("en-GB", {
 - Use commas, colons, semicolons, or full stops instead
 - Use only headings, paragraphs and bullet lists
 - Format pricing clearly with spacing and bullet points
-- Finish the full proposal properly. Do not stop mid-section.
+- Keep the full proposal between 1,200 and 1,800 words
+- Complete the final Next Steps and CTA section in full
+- Never stop mid-sentence
+- Finish the full proposal properly. Do not stop mid-section
 
 STRUCTURE:
 1. Executive Summary
