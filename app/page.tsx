@@ -349,7 +349,7 @@ Professional
 Boardroom-quality
 Use signature fields for both parties
 End with the booking link for implementation handover:
-https://calendar.app.google/e7e8NMLiRnajNFHo9`,,
+https://calendar.app.google/e7e8NMLiRnajNFHo9`,
   "invoice-generator": `Act as Mediahubink's commercial finance operator.
 
 Generate a clean client invoice in British English.
