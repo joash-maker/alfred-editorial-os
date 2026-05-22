@@ -175,6 +175,10 @@ ${new Date().toLocaleDateString("en-GB", {
 })}
 - NEVER output markdown tables
 - NEVER use pipe table formatting
+- NEVER use em dashes
+- NEVER use double hyphens as substitutes
+- NEVER use dash-led interruptions to connect thoughts
+- Use commas, colons, semicolons, or full stops instead
 - Use only headings, paragraphs and bullet lists
 - Format pricing clearly with spacing and bullet points
 - Finish the full proposal properly. Do not stop mid-section.
