@@ -127,32 +127,33 @@ type Mode =
   | "prospect-outreach"
   | "metrics-review"
   | "lead-operator"
-  | "proposal-builder";
-  | "service-agreement"
+  | "proposal-builder"
+  | "service-agreement";
+
 const modePrompts: Record<Mode, string> = {
   general:
-    "Respond as Alfred, Joash's editorial and growth chief of staff. Be calm, clear, useful and commercially aware.",
+    "Respond as Alfred, Joash's commercial chief of staff for Mediahubink. Be calm, clear, useful and commercially aware.",
 
   "creative-desk":
     "Turn the user's thought into a Creative Desk content idea. Suggest whether it should become Tuesday Builder’s Brief, Thursday Lab Notes, or Sunday Strategic Reset. Then create a strong title, angle, outline, Substack CTA, LinkedIn teaser, Substack Note and visual brief.",
 
   "linkedin-lead":
-    "Create a modern, punchy, effective LinkedIn lead-generation post for Mediahubink. Use British English. Make it commercially sharp, direct and specific. Structure it with a strong hook, pain point, numbers or business impact, mechanism, clear CTA, and a pinned comment.",
+    "Create a modern, effective LinkedIn lead-generation post for Mediahubink. Use British English. Make it commercially sharp, direct and specific. Structure it with a strong hook, pain point, numbers or business impact, mechanism, clear CTA, and a pinned comment. Avoid hype, em dashes and double hyphens.",
 
   "substack-note":
     "Create a short Substack Note from the user's thought. Make it thoughtful, concise, calm and worth replying to. Include one sharp idea, one short reflection, and a soft invitation to read or subscribe.",
 
   "vertical-campaign":
-    "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused.",
+    "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused. Avoid hype, em dashes and double hyphens.",
 
   "prospect-intelligence":
-    "Act as Mediahubink's commercial intelligence strategist. Never ask for more information unless absolutely necessary. If the user gives a broad industry, analyse the vertical immediately. If they give a specific company, analyse that company using available clues and assumptions without fabricating facts. If only a URL is provided, do not pretend to visit it. Use loaded projects, offers, universal AI products and business assumptions. If no exact demo exists, recommend the closest proof asset and explain transferability. Always include: pain points, missed revenue gaps, operational inefficiencies, best-fit AI offer, proof asset, outreach angle, objections, LinkedIn DM, email draft, next action. British English. Commercially sharp. No hesitation.",
+    "Act as Mediahubink's commercial intelligence strategist. Never ask for more information unless absolutely necessary. If the user gives a broad industry, analyse the vertical immediately. If they give a specific company, analyse that company using available clues and assumptions without fabricating facts. If only a URL is provided, do not pretend to visit it. Use loaded projects, offers, universal AI products and business assumptions. If no exact demo exists, recommend the closest proof asset and explain transferability. Always include: pain points, missed revenue gaps, operational inefficiencies, best-fit AI offer, proof asset, outreach angle, objections, LinkedIn DM, email draft, next action. British English. Commercially sharp. No em dashes or double hyphens.",
 
   "campaign-weekly":
-    "Act as Alfred, Mediahubink's campaign chief of staff. Build a weekly campaign plan using the current projects, demos, offers, leads and knowledge loaded into context. Include: weekly objective, target vertical, key offer, best demo to push, 5 LinkedIn post ideas, 3 Substack Notes, outreach actions, CRM actions, daily schedule, CTA strategy, and Friday reflection prompt. Keep it practical, focused and commercially useful.",
+    "Act as Alfred, Mediahubink's campaign chief of staff. Build a weekly campaign plan using the current projects, demos, offers, leads and knowledge loaded into context. Include: weekly objective, target vertical, key offer, best demo to push, 5 LinkedIn post ideas, 3 Substack Notes, outreach actions, CRM actions, daily schedule, CTA strategy, and Friday reflection prompt. Keep it practical, focused and commercially useful. Avoid hype, em dashes and double hyphens.",
 
   "prospect-outreach":
-    "Act as Mediahubink's outreach strategist. Create commercially sharp outreach for the prospect or vertical provided. If no exact demo exists, intelligently map the closest Mediahubink proof asset and explain how the same AI framework applies. Include pain points, best-fit AI offer, proof asset, LinkedIn connection message, follow-up sequence, objections and suggested replies. British English. Warm, practical, direct.",
+    "Act as Mediahubink's outreach strategist. Create commercially sharp outreach for the prospect or vertical provided. If no exact demo exists, intelligently map the closest Mediahubink proof asset and explain how the same AI framework applies. Include pain points, best-fit AI offer, proof asset, LinkedIn connection message, follow-up sequence, objections and suggested replies. British English. Warm, practical, direct. Never use em dashes or double hyphens.",
 
   "metrics-review":
     "Act as Alfred, Mediahubink's campaign analyst. Review the metrics, campaign notes or weekly reflection provided. Identify what worked, what underperformed, likely reasons, strongest vertical, best content angle, CRM implications, next week's recommendation, what to stop, what to double down on, and one clear action plan. Be honest, practical and commercially focused.",
@@ -160,7 +161,7 @@ const modePrompts: Record<Mode, string> = {
   "lead-operator":
     "Act as Mediahubink's AI sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
 
-    "proposal-builder": `Act as Mediahubink's commercial proposal strategist.
+  "proposal-builder": `Act as Mediahubink's commercial proposal strategist.
 
 Build a polished UK client proposal in British English.
 
@@ -187,15 +188,15 @@ ${new Date().toLocaleDateString("en-GB", {
 - Finish the full proposal properly. Do not stop mid-section
 
 STRUCTURE:
-1. Executive Summary
-2. Business Problem
-3. Opportunity Cost
-4. Recommended AI Solution
+1. Executive summary
+2. Business problem
+3. Opportunity cost
+4. Recommended AI solution
 5. Pricing
-6. Implementation Timeline
+6. Implementation timeline
 7. ROI
-8. Objections and Responses
-9. Next Steps
+8. Objections and responses
+9. Next steps
 10. CTA
 
 STYLE:
@@ -209,6 +210,76 @@ STYLE:
 END WITH:
 Book a strategy call:
 https://calendar.app.google/e7e8NMLiRnajNFHo9`,
+
+  "service-agreement": `Act as Mediahubink's legal-commercial operations adviser.
+
+Generate a professional UK service agreement in British English.
+
+IMPORTANT:
+This is a practical commercial agreement template, not formal legal advice. Write it clearly and professionally so it can be reviewed by the client and, where needed, by a solicitor.
+
+STRICT RULES:
+- NEVER use em dashes
+- NEVER use double hyphens
+- NEVER use dash-led interruptions to connect thoughts
+- Use commas, colons, semicolons, or separate sentences instead
+- Use sentence case headings
+- Use clear contractual formatting
+- Be commercially clear
+- Be concise but complete
+- No hype
+- No fluff
+- No legal theatre
+
+DEFAULT PROVIDER DETAILS:
+Provider: Mediahubink
+Founder: Joash F. Perera
+Website: https://www.mediahubink.com
+Booking link: https://calendar.app.google/e7e8NMLiRnajNFHo9
+
+DEFAULT TERMS:
+- Governing law: England and Wales
+- Minimum commitment: 3 months unless the user states otherwise
+- Payment: monthly in advance
+- Setup fee: include if supplied in the user's prompt
+- Monthly fee: include if supplied in the user's prompt
+
+INCLUDE THESE SECTIONS:
+1. Parties
+2. Background
+3. Services
+4. Scope of work
+5. Fees and payment terms
+6. Setup fees
+7. Monthly subscription terms
+8. Minimum commitment
+9. Client responsibilities
+10. AI limitations and third-party dependencies
+11. Data, privacy and regulated compliance
+12. Confidentiality
+13. Intellectual property
+14. Support and response expectations
+15. Change requests
+16. Termination
+17. Limitation of liability
+18. Governing law
+19. Acceptance and signature block
+
+AI CLAUSES MUST INCLUDE:
+- AI outputs depend on approved source information
+- Mediahubink is not liable for incorrect or incomplete client-supplied information
+- Third-party services including Anthropic, WhatsApp, hosting providers, calendar tools and APIs may affect uptime
+- Client remains responsible for regulated compliance, sector-specific obligations and final approval of public-facing claims
+- The AI agent does not provide legal, financial, clinical, medical, agricultural, safeguarding or regulated advice unless explicitly reviewed and approved by the client
+
+OUTPUT FORMAT:
+Clean markdown
+Client-ready
+Professional
+Boardroom-quality
+Use signature fields for both parties
+End with the booking link for implementation handover:
+https://calendar.app.google/e7e8NMLiRnajNFHo9`,
 };
 
 export default function HomePage() {
@@ -219,9 +290,7 @@ export default function HomePage() {
   const [saveMessage, setSaveMessage] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(
-    null
-  );
+  const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(null);
 
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [loadingThoughts, setLoadingThoughts] = useState(false);
@@ -291,8 +360,8 @@ export default function HomePage() {
     }
 
     localStorage.setItem("alfredProposal", reply);
-sessionStorage.setItem("alfredProposal", reply);
-window.open("/proposal", "_blank");
+    sessionStorage.setItem("alfredProposal", reply);
+    window.open("/proposal", "_blank");
   }
 
   function startSpeech() {
@@ -350,23 +419,17 @@ window.open("/proposal", "_blank");
 
     const demoContext =
       demos.length > 0
-        ? demos
-            .map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`)
-            .join("\n")
+        ? demos.map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`).join("\n")
         : "Context still loading...";
 
     const offerContext =
       offers.length > 0
-        ? offers
-            .map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`)
-            .join("\n")
+        ? offers.map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`).join("\n")
         : "Context still loading...";
 
     const knowledgeContext =
       knowledge.length > 0
-        ? knowledge
-            .map((k) => `${k.category} - ${k.title}: ${k.content}`)
-            .join("\n")
+        ? knowledge.map((k) => `${k.category} - ${k.title}: ${k.content}`).join("\n")
         : "Context still loading...";
 
     const leadContext =
@@ -702,7 +765,7 @@ ${prompt}
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Build a proposal for Woodley Dentist using Fredi Capture and optional Capture+."
+              placeholder="Example: Create a service agreement for Kolagri for Fredi Capture+ at £697/month plus £299 setup."
             />
 
             <div className="mode-grid">
@@ -721,200 +784,116 @@ ${prompt}
                 <span>Short, thoughtful post for Substack Notes.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("vertical-campaign")}
-              >
+              <button className="mode" onClick={() => setMode("vertical-campaign")}>
                 <strong>Vertical Campaign</strong>
                 <span>5-post campaign for one target industry.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("prospect-intelligence")}
-              >
+              <button className="mode" onClick={() => setMode("prospect-intelligence")}>
                 <strong>Prospect Intelligence</strong>
                 <span>Analyse a company, profile or opportunity.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("campaign-weekly")}
-              >
+              <button className="mode" onClick={() => setMode("campaign-weekly")}>
                 <strong>Campaign Weekly</strong>
                 <span>Plan posts, demos, outreach and weekly reflection.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("prospect-outreach")}
-              >
+              <button className="mode" onClick={() => setMode("prospect-outreach")}>
                 <strong>Prospect Outreach</strong>
                 <span>Create DMs, emails and follow-up sequences.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("metrics-review")}
-              >
+              <button className="mode" onClick={() => setMode("metrics-review")}>
                 <strong>Metrics Review</strong>
                 <span>Review results and decide what to adjust next.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("lead-operator")}
-              >
+              <button className="mode" onClick={() => setMode("lead-operator")}>
                 <strong>Lead Operator</strong>
                 <span>Prioritise CRM leads and decide who to chase next.</span>
               </button>
 
-              <button
-                className="mode"
-                onClick={() => setMode("proposal-builder")}
-              >
+              <button className="mode" onClick={() => setMode("proposal-builder")}>
                 <strong>Proposal Builder</strong>
                 <span>Create proposal-ready scopes, pricing and CTAs.</span>
+              </button>
+
+              <button className="mode" onClick={() => setMode("service-agreement")}>
+                <strong>Service Agreement</strong>
+                <span>Generate Mediahubink client agreements.</span>
               </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
-              <button
-                className="btn"
-                onClick={() => askAlfred()}
-                disabled={loading}
-              >
+              <button className="btn" onClick={() => askAlfred()} disabled={loading}>
                 {loading ? "Alfred is thinking..." : "Ask Alfred"}
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={saveThought}
-                disabled={saving}
-              >
+              <button className="btn btn-secondary" onClick={saveThought} disabled={saving}>
                 {saving ? "Saving..." : "Save Thought"}
               </button>
 
               <div className="icon-actions">
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("creative-desk")}
-                  disabled={loading}
-                  title="Creative Desk"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("creative-desk")} disabled={loading} title="Creative Desk">
                   <PenSquare size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("linkedin-lead")}
-                  disabled={loading}
-                  title="LinkedIn Lead Post"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("linkedin-lead")} disabled={loading} title="LinkedIn Lead Post">
                   <Briefcase size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("prospect-intelligence")}
-                  disabled={loading}
-                  title="Prospect Intelligence"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("prospect-intelligence")} disabled={loading} title="Prospect Intelligence">
                   <Search size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("campaign-weekly")}
-                  disabled={loading}
-                  title="Campaign Weekly"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("campaign-weekly")} disabled={loading} title="Campaign Weekly">
                   <Megaphone size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("prospect-outreach")}
-                  disabled={loading}
-                  title="Prospect Outreach"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("prospect-outreach")} disabled={loading} title="Prospect Outreach">
                   <Send size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("metrics-review")}
-                  disabled={loading}
-                  title="Metrics Review"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("metrics-review")} disabled={loading} title="Metrics Review">
                   <BarChart3 size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("lead-operator")}
-                  disabled={loading}
-                  title="Lead Operator"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("lead-operator")} disabled={loading} title="Lead Operator">
                   <Target size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => setModeAndAsk("proposal-builder")}
-                  disabled={loading}
-                  title="Proposal Builder"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("proposal-builder")} disabled={loading} title="Proposal Builder">
                   <FileText size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={printProposal}
-                  title="Export Proposal PDF"
-                >
+                <button className="icon-btn" onClick={() => setModeAndAsk("service-agreement")} disabled={loading} title="Service Agreement">
+                  <Clipboard size={18} />
+                </button>
+
+                <button className="icon-btn" onClick={printProposal} title="Export Proposal PDF">
                   <Printer size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={openProposalPage}
-                  title="Open Branded Proposal"
-                >
+                <button className="icon-btn" onClick={openProposalPage} title="Open Branded Proposal">
                   <ExternalLink size={18} />
                 </button>
 
                 {!isListening ? (
-                  <button
-                    className="icon-btn"
-                    onClick={startSpeech}
-                    title="Tap to Speak"
-                  >
+                  <button className="icon-btn" onClick={startSpeech} title="Tap to Speak">
                     <Mic size={18} />
                   </button>
                 ) : (
-                  <button
-                    className="icon-btn listening"
-                    onClick={stopSpeech}
-                    title="Stop Listening"
-                  >
+                  <button className="icon-btn listening" onClick={stopSpeech} title="Stop Listening">
                     <Square size={18} />
                   </button>
                 )}
 
-                <button
-                  className="icon-btn"
-                  onClick={() => copyText(prompt, "Prompt")}
-                  title="Copy Prompt"
-                >
+                <button className="icon-btn" onClick={() => copyText(prompt, "Prompt")} title="Copy Prompt">
                   <Clipboard size={18} />
                 </button>
 
-                <button
-                  className="icon-btn"
-                  onClick={() => copyText(reply, "Output")}
-                  title="Copy Output"
-                >
+                <button className="icon-btn" onClick={() => copyText(reply, "Output")} title="Copy Output">
                   <Copy size={18} />
                 </button>
 
@@ -958,11 +937,7 @@ ${prompt}
           <div className="panel-title">Project / Demo Manager</div>
 
           <div className="actions" style={{ marginBottom: "18px" }}>
-            <button
-              className="btn btn-secondary"
-              onClick={loadProjects}
-              disabled={loadingProjects}
-            >
+            <button className="btn btn-secondary" onClick={loadProjects} disabled={loadingProjects}>
               {loadingProjects ? "Loading..." : "Load Projects"}
             </button>
           </div>
