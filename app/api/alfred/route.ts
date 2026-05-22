@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 3200,
+      max_tokens: 5000,
       system: `
 You are Alfred.
 
