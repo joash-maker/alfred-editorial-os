@@ -565,6 +565,128 @@ ${prompt}
     }
   }
 
+
+  async function generateAgreementFromProposal() {
+    if (!reply.trim()) {
+      setCopyMessage("Generate a proposal first, then create the agreement.");
+      return;
+    }
+
+    setMode("service-agreement");
+    setLoading(true);
+    setSaveMessage("");
+    setCopyMessage("");
+    setReply("");
+
+    const agreementPrompt = `
+Create a service agreement from the proposal below.
+
+Use the proposal to extract:
+- client name
+- offer name
+- service scope
+- setup fee
+- monthly fee
+- minimum commitment
+- implementation expectations
+- AI limitations
+- support terms
+- client responsibilities
+
+Use service-agreement mode rules exactly.
+
+Proposal content:
+${reply}
+`;
+
+    const demoContext =
+      demos.length > 0
+        ? demos.map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`).join("\n")
+        : "Context still loading...";
+
+    const offerContext =
+      offers.length > 0
+        ? offers.map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`).join("\n")
+        : "Context still loading...";
+
+    const knowledgeContext =
+      knowledge.length > 0
+        ? knowledge.map((k) => `${k.category} - ${k.title}: ${k.content}`).join("\n")
+        : "Context still loading...";
+
+    const leadContext =
+      leads.length > 0
+        ? leads
+            .map(
+              (l) =>
+                `${l.company || l.name || "Unnamed lead"} |
+${l.industry || "No industry"} |
+Interest: ${l.interest || "None"} |
+Stage: ${l.stage || "new"} |
+Score: ${l.score || 0} |
+Priority: ${l.priority || "medium"} |
+Next: ${l.next_action || "none"} |
+Notes: ${l.notes || "none"}`
+            )
+            .join("\n")
+        : "No leads loaded.";
+
+    const projectContext =
+      projects.length > 0
+        ? projects
+            .map(
+              (p) =>
+                `${p.name}: ${p.url || ""} | ${
+                  p.category || ""
+                } | Audience: ${p.audience || ""} | ${p.description || ""}`
+            )
+            .join("\n")
+        : "Context still loading...";
+
+    const fullPrompt = `
+Mode:
+service-agreement
+
+Instruction:
+${modePrompts["service-agreement"]}
+
+Permanent Alfred Knowledge:
+${knowledgeContext}
+
+Current Mediahubink demo links:
+${demoContext}
+
+Current Mediahubink offers:
+${offerContext}
+
+Current CRM-lite leads:
+${leadContext}
+
+Current Projects and Demos:
+${projectContext}
+
+User thought/topic:
+${agreementPrompt}
+`;
+
+    try {
+      const response = await fetch("/api/alfred", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt }),
+      });
+
+      const data = await response.json();
+      setReply(data.reply || data.error || "No response from Alfred.");
+      setPrompt("Generate service agreement from latest proposal.");
+    } catch {
+      setReply("Something went wrong. Check the API route or Vercel logs.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
   async function saveThought() {
     if (!prompt.trim()) return;
 
@@ -931,6 +1053,15 @@ ${prompt}
 
                 <button className="icon-btn" onClick={() => setModeAndAsk("service-agreement")} disabled={loading} title="Service Agreement">
                   <Clipboard size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={generateAgreementFromProposal}
+                  disabled={loading}
+                  title="Generate Agreement From Proposal"
+                >
+                  <FileText size={18} />
                 </button>
 
                 <button className="icon-btn" onClick={printProposal} title="Export Proposal PDF">
