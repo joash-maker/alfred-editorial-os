@@ -128,7 +128,7 @@ type Mode =
   | "metrics-review"
   | "lead-operator"
   | "proposal-builder";
-
+  | "service-agreement"
 const modePrompts: Record<Mode, string> = {
   general:
     "Respond as Alfred, Joash's editorial and growth chief of staff. Be calm, clear, useful and commercially aware.",
