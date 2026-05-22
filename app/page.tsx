@@ -208,7 +208,7 @@ STYLE:
 
 END WITH:
 Book a strategy call:
-https://calendly.com/mediahubink-info/60min`,
+https://calendar.app.google/e7e8NMLiRnajNFHo9`,
 };
 
 export default function HomePage() {
