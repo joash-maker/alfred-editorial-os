@@ -128,7 +128,8 @@ type Mode =
   | "metrics-review"
   | "lead-operator"
   | "proposal-builder"
-  | "service-agreement";
+  | "service-agreement"
+  | "invoice-generator";
 
 const modePrompts: Record<Mode, string> = {
   /* EMAIL ROUTING RULE:
@@ -348,7 +349,83 @@ Professional
 Boardroom-quality
 Use signature fields for both parties
 End with the booking link for implementation handover:
-https://calendar.app.google/e7e8NMLiRnajNFHo9`,
+https://calendar.app.google/e7e8NMLiRnajNFHo9`,,
+  "invoice-generator": `Act as Mediahubink's commercial finance operator.
+
+Generate a clean client invoice in British English.
+
+This is for formal payment documentation.
+
+STRICT RULES:
+- NEVER use em dashes
+- NEVER use double hyphens
+- NEVER use dash-led interruptions to connect thoughts
+- Use commas, colons, semicolons, or separate sentences instead
+- Use sentence case headings
+- Use clean invoice formatting
+- Be clear, concise and commercially accurate
+- NEVER output markdown tables
+- NEVER use pipe table formatting
+- Use headings and bullet lists only
+- NEVER invent dates
+- ALWAYS use this exact invoice issue date:
+${new Date().toLocaleDateString("en-GB", {
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+})}
+- If no invoice number is supplied, use: Invoice number: To be assigned
+- If no due date is supplied, use: Payment due: 7 days from invoice date
+- Complete the invoice fully
+- Never stop mid-sentence
+
+FORMAL PROVIDER DETAILS:
+Use the full legal provider identity exactly as written below.
+
+Mediahubink Limited
+Company No. 17218602
+7 Tileyard North
+Wakefield
+WF1 5FY
+United Kingdom
+
+info@mediahubink.com
+07764 182758
+https://www.mediahubink.com
+
+VAT RULE:
+Mediahubink Limited is not currently VAT registered.
+Do not add VAT to prices.
+Do not write "plus VAT".
+Do not write "exclusive of VAT".
+Use: "No VAT is charged as Mediahubink Limited is not currently VAT registered."
+
+PAYMENT TERMS:
+- Payment due within 7 days unless stated otherwise
+- Payment method: Bank transfer or agreed payment link
+- If bank details are not supplied, write: Bank details: To be supplied securely
+- Formal payment queries should go to info@mediahubink.com
+
+INCLUDE THESE SECTIONS:
+1. Invoice
+2. Provider details
+3. Client details
+4. Invoice details
+5. Services billed
+6. Amount due
+7. VAT status
+8. Payment terms
+9. Notes
+10. Footer
+
+OUTPUT FORMAT:
+Clean markdown
+Invoice-ready
+No tables
+Bullet lists only
+Professional
+Formal
+Use info@mediahubink.com for all invoice contact details`,
 };
 
 export default function HomePage() {
@@ -694,6 +771,129 @@ ${agreementPrompt}
   }
 
 
+
+  async function generateInvoiceFromAgreement() {
+    if (!reply.trim()) {
+      setCopyMessage("Generate a service agreement first, then create the invoice.");
+      return;
+    }
+
+    setMode("invoice-generator");
+    setLoading(true);
+    setSaveMessage("");
+    setCopyMessage("");
+    setReply("");
+
+    const invoicePrompt = `
+Create an invoice from the agreement below.
+
+Use the agreement to extract:
+- client name
+- service name
+- setup fee
+- monthly fee
+- amount due today
+- payment terms
+- invoice contact details
+- VAT status
+- formal provider details
+
+If the agreement includes both a setup fee and first monthly subscription, calculate the total due today.
+If the agreement does not explicitly say otherwise, invoice the setup fee plus first monthly subscription.
+Use invoice-generator mode rules exactly.
+
+Agreement content:
+${reply}
+`;
+
+    const demoContext =
+      demos.length > 0
+        ? demos.map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`).join("\n")
+        : "Context still loading...";
+
+    const offerContext =
+      offers.length > 0
+        ? offers.map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`).join("\n")
+        : "Context still loading...";
+
+    const knowledgeContext =
+      knowledge.length > 0
+        ? knowledge.map((k) => `${k.category} - ${k.title}: ${k.content}`).join("\n")
+        : "Context still loading...";
+
+    const leadContext =
+      leads.length > 0
+        ? leads
+            .map(
+              (l) =>
+                `${l.company || l.name || "Unnamed lead"} |
+${l.industry || "No industry"} |
+Interest: ${l.interest || "None"} |
+Stage: ${l.stage || "new"} |
+Score: ${l.score || 0} |
+Priority: ${l.priority || "medium"} |
+Next: ${l.next_action || "none"} |
+Notes: ${l.notes || "none"}`
+            )
+            .join("\n")
+        : "No leads loaded.";
+
+    const projectContext =
+      projects.length > 0
+        ? projects
+            .map(
+              (p) =>
+                `${p.name}: ${p.url || ""} | ${
+                  p.category || ""
+                } | Audience: ${p.audience || ""} | ${p.description || ""}`
+            )
+            .join("\n")
+        : "Context still loading...";
+
+    const fullPrompt = `
+Mode:
+invoice-generator
+
+Instruction:
+${modePrompts["invoice-generator"]}
+
+Permanent Alfred Knowledge:
+${knowledgeContext}
+
+Current Mediahubink demo links:
+${demoContext}
+
+Current Mediahubink offers:
+${offerContext}
+
+Current CRM-lite leads:
+${leadContext}
+
+Current Projects and Demos:
+${projectContext}
+
+User thought/topic:
+${invoicePrompt}
+`;
+
+    try {
+      const response = await fetch("/api/alfred", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt }),
+      });
+
+      const data = await response.json();
+      setReply(data.reply || data.error || "No response from Alfred.");
+      setPrompt("Generate invoice from latest service agreement.");
+    } catch {
+      setReply("Something went wrong. Check the API route or Vercel logs.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
   async function saveThought() {
     if (!prompt.trim()) return;
 
@@ -956,7 +1156,7 @@ ${agreementPrompt}
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Create a service agreement for Kolagri for Fredi Capture+ at £697/month plus £299 setup."
+              placeholder="Example: Create an invoice for Woodley Dentist for Fredi Capture+ setup fee £299 and first month £697."
             />
 
             <div className="mode-grid">
@@ -1014,6 +1214,11 @@ ${agreementPrompt}
                 <strong>Service Agreement</strong>
                 <span>Generate Mediahubink client agreements.</span>
               </button>
+
+              <button className="mode" onClick={() => setMode("invoice-generator")}>
+                <strong>Invoice Generator</strong>
+                <span>Create formal Mediahubink invoices with no VAT charged.</span>
+              </button>
             </div>
 
             <div className="actions" style={{ marginTop: "16px" }}>
@@ -1069,6 +1274,24 @@ ${agreementPrompt}
                   title="Generate Agreement From Proposal"
                 >
                   <FileText size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={() => setModeAndAsk("invoice-generator")}
+                  disabled={loading}
+                  title="Invoice Generator"
+                >
+                  <Briefcase size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={generateInvoiceFromAgreement}
+                  disabled={loading}
+                  title="Generate Invoice From Agreement"
+                >
+                  <Clipboard size={18} />
                 </button>
 
                 <button className="icon-btn" onClick={printProposal} title="Export Proposal PDF">
