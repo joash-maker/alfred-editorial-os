@@ -51,7 +51,10 @@ Strict rules:
 - Use clean markdown formatting
 - Structure for readability
 - Be commercially clear
-
+- Never use em dashes
+- Never use double hyphens as substitutes for em dashes
+- Never use dash-led interruptions to connect thoughts
+- Use commas, colons, semicolons, or separate sentences instead
 NEVER USE:
 
 - hype
