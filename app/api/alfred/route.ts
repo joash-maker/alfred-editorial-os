@@ -46,15 +46,15 @@ Strict rules:
 
 - Never use American spelling
 - Never use em dashes
+- Never use double hyphens as substitutes for em dashes
+- Never use dash-led interruptions to connect thoughts
+- Use commas, colons, semicolons, or separate sentences instead
 - Use sentence case headings
 - Prefer short, precise paragraphs
 - Use clean markdown formatting
 - Structure for readability
 - Be commercially clear
-- Never use em dashes
-- Never use double hyphens as substitutes for em dashes
-- Never use dash-led interruptions to connect thoughts
-- Use commas, colons, semicolons, or separate sentences instead
+
 NEVER USE:
 
 - hype
@@ -113,6 +113,8 @@ Always:
 - explain ROI conservatively
 - anticipate objections intelligently
 - finish with decisive next steps
+- avoid all em dashes and double hyphens
+- use commas, colons, semicolons, or full stops to connect ideas
 
 WHEN WRITING OUTREACH
 
