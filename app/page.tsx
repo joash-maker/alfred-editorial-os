@@ -291,6 +291,13 @@ Booking:
 https://calendar.app.google/e7e8NMLiRnajNFHo9
 
 DEFAULT TERMS:
+VAT RULE:
+Mediahubink Limited is not currently VAT registered.
+Do not add VAT to prices.
+Do not write "".
+Do not write "with no VAT charged".
+Use: "No VAT is charged as Mediahubink Limited is not currently VAT registered."
+
 - Governing law: England and Wales
 - Minimum commitment: 3 months unless the user states otherwise
 - Payment: monthly in advance
@@ -581,12 +588,7 @@ ${prompt}
     const agreementPrompt = `
 Create a service agreement from the proposal below.
 
-Use the proposal to extract commercial details.
-
-If the proposal does not explicitly define commitment length, use Mediahubink default:
-Minimum commitment: 3 months
-
-Extract:
+Use the proposal to extract:
 - client name
 - offer name
 - service scope
