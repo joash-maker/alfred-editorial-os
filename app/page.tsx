@@ -177,6 +177,14 @@ ${new Date().toLocaleDateString("en-GB", {
   month: "long",
   year: "numeric",
 })}
+- Use this exact agreement date structure:
+  Agreement issue date: ${new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })}
+  Execution date: To be completed on signature
+- Never replace the issue date with year only
 - NEVER output markdown tables
 - NEVER use pipe table formatting
 - NEVER use em dashes
@@ -256,33 +264,6 @@ STRICT RULES:
 - No hype
 - No fluff
 - No legal theatre
-- NEVER output markdown tables
-- NEVER use pipe table formatting
-- Present pricing and support terms as bullet lists only
-- NEVER invent dates
-- ALWAYS use this exact date:
-${new Date().toLocaleDateString("en-GB", {
-  day: "2-digit",
-  month: "long",
-  year: "numeric",
-})}
-- Use this exact agreement date structure:
-  Agreement issue date: ${new Date().toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })}
-  Execution date: To be completed on signature
-- Never replace the issue date with year only
-- Keep agreement between 1,500 and 2,200 words
-- Complete every clause fully
-- Never stop mid-sentence
-- NEVER invent agreement reference numbers
-- If no agreement reference is supplied, use: Agreement reference: To be assigned
-- Do not abbreviate provider identity
-- Use full legal provider details exactly as supplied
-- MANDATORY FINAL SECTION: Acceptance and signature block
-- The agreement is invalid without signatures
 
 DEFAULT PROVIDER DETAILS:
 Use info@mediahubink.com for this service agreement and all formal service documents.
@@ -329,7 +310,7 @@ INCLUDE THESE SECTIONS:
 10. AI limitations and third-party dependencies
 11. Data, privacy and regulated compliance
 12. Confidentiality
-13. Intellectual property
+13. Intellectual property, using the intellectual property rule exactly
 14. Support and response expectations
 15. Change requests
 16. Termination
@@ -344,8 +325,17 @@ AI CLAUSES MUST INCLUDE:
 - Client remains responsible for regulated compliance, sector-specific obligations and final approval of public-facing claims
 - The AI agent does not provide legal, financial, clinical, medical, agricultural, safeguarding or regulated advice unless explicitly reviewed and approved by the client
 
+INTELLECTUAL PROPERTY RULE:
+
+Configured deliverables created specifically for the client may be made available in a readable export format on written request, provided all outstanding fees have been paid in full.
+
+Underlying Mediahubink frameworks, AI logic, prompt systems, agent architecture, automation methods, templates and proprietary operating methods remain the exclusive intellectual property of Mediahubink Limited.
+
+The client receives a licence to use the configured service during the active term of the agreement only, unless otherwise agreed in writing.
+
 OUTPUT FORMAT:
 Clean markdown
+- Include both the agreement issue date and execution date near the top of the agreement
 Client-ready
 Professional
 Boardroom-quality
