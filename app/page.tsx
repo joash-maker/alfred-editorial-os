@@ -1326,6 +1326,87 @@ ${invoicePrompt}
               </div>
             </div>
 
+
+              <div className="mobile-actions">
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("creative-desk")} disabled={loading}>
+                  <span>✍️</span><strong>Creative desk</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("linkedin-lead")} disabled={loading}>
+                  <span>💼</span><strong>LinkedIn post</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("prospect-intelligence")} disabled={loading}>
+                  <span>🔎</span><strong>Prospect intel</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("campaign-weekly")} disabled={loading}>
+                  <span>📣</span><strong>Campaign</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("prospect-outreach")} disabled={loading}>
+                  <span>📨</span><strong>Outreach</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("metrics-review")} disabled={loading}>
+                  <span>📈</span><strong>Metrics</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("lead-operator")} disabled={loading}>
+                  <span>🎯</span><strong>Lead operator</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("proposal-builder")} disabled={loading}>
+                  <span>📄</span><strong>Proposal</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("service-agreement")} disabled={loading}>
+                  <span>📜</span><strong>Agreement</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={generateAgreementFromProposal} disabled={loading}>
+                  <span>🧩</span><strong>Agreement from proposal</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => setModeAndAsk("invoice-generator")} disabled={loading}>
+                  <span>🧾</span><strong>Invoice</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={generateInvoiceFromAgreement} disabled={loading}>
+                  <span>💷</span><strong>Invoice from agreement</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={printProposal} disabled={loading}>
+                  <span>🖨️</span><strong>Print / PDF</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={openProposalPage} disabled={loading}>
+                  <span>↗️</span><strong>Branded page</strong>
+                </button>
+
+                {!isListening ? (
+                  <button className="mobile-action-btn" onClick={startSpeech} disabled={loading}>
+                    <span>🎙️</span><strong>Tap to speak</strong>
+                  </button>
+                ) : (
+                  <button className="mobile-action-btn listening" onClick={stopSpeech}>
+                    <span>⏹️</span><strong>Stop listening</strong>
+                  </button>
+                )}
+
+                <button className="mobile-action-btn" onClick={() => copyText(prompt, "Prompt")}>
+                  <span>📋</span><strong>Copy prompt</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={() => copyText(reply, "Output")}>
+                  <span>📑</span><strong>Copy output</strong>
+                </button>
+
+                <button className="mobile-action-btn danger" onClick={clearChat}>
+                  <span>🗑️</span><strong>Clear chat</strong>
+                </button>
+              </div>
+
             <p style={{ color: "#a3a3a3", marginTop: "14px", fontSize: "14px" }}>
               Current mode: {mode}
               {isListening ? " · Listening..." : ""}
