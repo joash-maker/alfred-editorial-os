@@ -152,7 +152,7 @@ Primary language:
 
 Avoid:
 - AI agency
-- chatbot vendor
+- enquiry tool vendor
 - automation freelancer
 - novelty AI product business
 - audit-led pitch
@@ -160,6 +160,26 @@ Avoid:
 Preferred CTA:
 Audit your enquiry system.
 Do not default to: Try the demo.
+
+PRODUCT LANGUAGE RULE
+
+Keep product names such as Fredi Capture+, Fredi Enterprise, Pondu and Netty unchanged.
+
+Do not describe Mediahubink primarily as a chatbot provider, automation freelancer or AI agent seller.
+
+Preferred product language:
+- digital enquiry assistant
+- enquiry capture system
+- qualification layer
+- response workflow
+- automated voice response handling
+- after-hours enquiry capture
+- inbound response layer
+- enquiry routing system
+- commercial enquiry system
+
+Only reference AI when technically necessary, not as default positioning.
+
 `;
 
 const modePrompts: Record<Mode, string> = {
@@ -710,6 +730,9 @@ ${modePrompts[selectedMode]}
 
 Mediahubink positioning:
 ${mediahubinkPositioning}
+
+Product language rule:
+Keep product names unchanged. Prefer: digital enquiry assistant, enquiry capture system, qualification layer, response workflow, automated voice response handling, after-hours enquiry capture and enquiry routing system. Avoid default AI product terminology unless technically necessary.
 
 Permanent Alfred Knowledge:
 ${knowledgeContext}
