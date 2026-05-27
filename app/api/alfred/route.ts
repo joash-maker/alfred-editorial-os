@@ -140,6 +140,57 @@ FORMAL DOCUMENT CONTACT RULE
 - use info@mediahubink.com for proposals, service agreements, payment documents and invoices
 - use hello@mediahubink.com for outreach, social posts, thought leadership and non-formal content
 
+
+MEDIAHUBINK PAYMENT RULES
+
+Preferred payment method:
+Secure Stripe payment links.
+
+Fallback:
+Bank transfer available on request.
+
+Formal payment contact:
+info@mediahubink.com
+
+VAT status:
+Mediahubink Limited is not currently VAT registered.
+No VAT is charged.
+
+Stripe payment links:
+
+Fredi Capture - Setup Fee (£299):
+https://buy.stripe.com/9B6cMZeeh5ca9SRbhFeIw00
+
+Fredi Capture - Monthly Retainer (£397/month):
+https://buy.stripe.com/4gMaERfilcEC6GFdpNeIw05
+
+Fredi Capture+ - Setup Fee (£299):
+https://buy.stripe.com/3cI4gt6LPfQO2qp85teIw01
+
+Fredi Capture+ - Monthly Retainer (£697/month):
+https://buy.stripe.com/28E28l0nrfQOaWV0D1eIw06
+
+Emergency Build - Crisis Chat (£599):
+https://buy.stripe.com/8x26oB6LPgUSd532L9eIw02
+
+Emergency Build - Crisis Chat + Voice (£999):
+https://buy.stripe.com/6oU14h6LP7kid5385teIw03
+
+Emergency Build - Crisis Full Stack (£1,499):
+https://buy.stripe.com/bJe4gtc69bAy5CB71peIw04
+
+Payment link rules:
+- If the offer matches one of the Stripe links above, output the correct payment link automatically
+- If both setup fee and monthly retainer are required, include both links
+- If the offer does not match a listed payment link, write: Bank transfer or custom payment link available on request
+- Never invent payment links
+- Never invent bank details
+- Do not use bank details unless the user supplies them
+- For formal documents, use info@mediahubink.com for payment queries
+- Ask clients to confirm payment by emailing info@mediahubink.com
+- For implementation services, direct the client to book the implementation call after payment:
+https://calendar.app.google/e7e8NMLiRnajNFHo9
+
 NEVER USE:
 
 - hype
@@ -259,8 +310,13 @@ Always:
 - use Mediahubink Limited formal details
 - do not add VAT
 - state that no VAT is charged because Mediahubink Limited is not currently VAT registered
+- use Stripe payment links first when a matching link exists
+- include both setup fee and monthly retainer Stripe links when relevant
+- never invent payment links
 - never invent bank details
-- use "Bank details: To be supplied securely" if bank details are not provided
+- use "Bank transfer or custom payment link available on request" if no Stripe link exists
+- ask the client to confirm payment by emailing info@mediahubink.com
+- direct the client to the implementation booking link after payment
 
 WHEN WRITING OUTREACH
 
