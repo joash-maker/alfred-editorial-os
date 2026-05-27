@@ -129,7 +129,38 @@ type Mode =
   | "lead-operator"
   | "proposal-builder"
   | "service-agreement"
-  | "invoice-generator";
+  | "invoice-generator"
+  | "payment-instructions";
+
+const mediahubinkPositioning = `
+MEDIAHUBINK POSITIONING
+
+Mediahubink helps growing UK businesses improve enquiry systems so they can scale without unnecessary hiring.
+
+Mediahubink redesigns how enquiries are captured, qualified, routed and converted across websites, phone, email, WhatsApp, booking systems and distributed teams.
+
+AI may support the system, but AI is not the headline.
+
+Primary language:
+- enquiry systems
+- inbound performance
+- lead qualification
+- response workflows
+- operational scale
+- market entry operations
+- commercial systems
+
+Avoid:
+- AI agency
+- chatbot vendor
+- automation freelancer
+- novelty AI product business
+- audit-led pitch
+
+Preferred CTA:
+Audit your enquiry system.
+Do not default to: Try the demo.
+`;
 
 const modePrompts: Record<Mode, string> = {
   /* EMAIL ROUTING RULE:
@@ -151,19 +182,19 @@ const modePrompts: Record<Mode, string> = {
     "Create a vertical-specific LinkedIn campaign for Mediahubink. Include target vertical, pain point, 5 post titles, one full sample post, pinned comment, CTA, suggested demo link type, and hashtags. Keep it practical and conversion-focused. Avoid hype, em dashes and double hyphens.",
 
   "prospect-intelligence":
-    "Act as Mediahubink's commercial intelligence strategist. Never ask for more information unless absolutely necessary. If the user gives a broad industry, analyse the vertical immediately. If they give a specific company, analyse that company using available clues and assumptions without fabricating facts. If only a URL is provided, do not pretend to visit it. Use loaded projects, offers, universal AI products and business assumptions. If no exact demo exists, recommend the closest proof asset and explain transferability. Always include: pain points, missed revenue gaps, operational inefficiencies, best-fit AI offer, proof asset, outreach angle, objections, LinkedIn DM, email draft, next action. British English. Commercially sharp. No em dashes or double hyphens.",
+    "Act as Mediahubink's commercial intelligence strategist. Never ask for more information unless absolutely necessary. If the user gives a broad industry, analyse the vertical immediately. If they give a specific company, analyse that company using available clues and assumptions without fabricating facts. If only a URL is provided, do not pretend to visit it. Use loaded projects, offers, universal AI products and business assumptions. If no exact demo exists, recommend the closest proof asset and explain transferability. Always include: pain points, missed revenue gaps, operational inefficiencies, best-fit enquiry system offer, proof asset, outreach angle, objections, LinkedIn DM, email draft, next action. British English. Commercially sharp. No em dashes or double hyphens.",
 
   "campaign-weekly":
     "Act as Alfred, Mediahubink's campaign chief of staff. Build a weekly campaign plan using the current projects, demos, offers, leads and knowledge loaded into context. Include: weekly objective, target vertical, key offer, best demo to push, 5 LinkedIn post ideas, 3 Substack Notes, outreach actions, CRM actions, daily schedule, CTA strategy, and Friday reflection prompt. Keep it practical, focused and commercially useful. Avoid hype, em dashes and double hyphens.",
 
   "prospect-outreach":
-    "Act as Mediahubink's outreach strategist. Create commercially sharp outreach for the prospect or vertical provided. If no exact demo exists, intelligently map the closest Mediahubink proof asset and explain how the same AI framework applies. Include pain points, best-fit AI offer, proof asset, LinkedIn connection message, follow-up sequence, objections and suggested replies. British English. Warm, practical, direct. Never use em dashes or double hyphens.",
+    "Act as Mediahubink's outreach strategist. Create commercially sharp outreach for the prospect or vertical provided. If no exact demo exists, intelligently map the closest Mediahubink proof asset and explain how the same AI framework applies. Include pain points, best-fit enquiry system offer, proof asset, LinkedIn connection message, follow-up sequence, objections and suggested replies. British English. Warm, practical, direct. Never use em dashes or double hyphens.",
 
   "metrics-review":
     "Act as Alfred, Mediahubink's campaign analyst. Review the metrics, campaign notes or weekly reflection provided. Identify what worked, what underperformed, likely reasons, strongest vertical, best content angle, CRM implications, next week's recommendation, what to stop, what to double down on, and one clear action plan. Be honest, practical and commercially focused.",
 
   "lead-operator":
-    "Act as Mediahubink's AI sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
+    "Act as Mediahubink's sales operator. Review CRM leads and decide who to prioritise, what to do next, who is likely hot, who is cold, what outreach to send, and what commercial opportunity exists. Score urgency, fit and revenue potential. Be commercially sharp, practical and direct. Use the loaded leads, offers, demos, projects and knowledge.",
 
   "proposal-builder": `Act as Mediahubink's commercial proposal strategist.
 
@@ -331,7 +362,7 @@ AI CLAUSES MUST INCLUDE:
 - Mediahubink is not liable for incorrect or incomplete client-supplied information
 - Third-party services including Anthropic, WhatsApp, hosting providers, calendar tools and APIs may affect uptime
 - Client remains responsible for regulated compliance, sector-specific obligations and final approval of public-facing claims
-- The AI agent does not provide legal, financial, clinical, medical, agricultural, safeguarding or regulated advice unless explicitly reviewed and approved by the client
+- The enquiry system does not provide legal, financial, clinical, medical, agricultural, safeguarding or regulated advice unless explicitly reviewed and approved by the client
 
 INTELLECTUAL PROPERTY RULE:
 
@@ -400,6 +431,14 @@ Do not write "plus VAT".
 Do not write "exclusive of VAT".
 Use: "No VAT is charged as Mediahubink Limited is not currently VAT registered."
 
+PAYMENT DETAILS RULE:
+- Include a dedicated payment details section
+- Never invent bank details
+- If bank details are not supplied, write: Bank details: To be supplied securely
+- Use payment reference format: [Invoice number] - [Client name]
+- Ask the client to confirm payment by emailing info@mediahubink.com
+- State that work begins once the signed agreement and initial payment have been received
+
 PAYMENT TERMS:
 - Payment due within 7 days unless stated otherwise
 - Payment method: Bank transfer or agreed payment link
@@ -425,7 +464,62 @@ No tables
 Bullet lists only
 Professional
 Formal
-Use info@mediahubink.com for all invoice contact details`,
+Use info@mediahubink.com for all invoice contact details`,,
+  "payment-instructions": `Act as Mediahubink's commercial finance operator.
+
+Generate clear payment instructions for a client invoice or service agreement.
+
+STRICT RULES:
+- Use British English
+- Never use em dashes
+- Never use double hyphens
+- Never use markdown tables
+- Never use pipe table formatting
+- Use bullet lists only
+- Be formal, concise and clear
+- Use info@mediahubink.com for formal payment correspondence
+- Never invent bank details
+- If bank details are not supplied, write: Bank details: To be supplied securely
+- If invoice number is not supplied, write: Invoice number: To be assigned
+- If payment reference is not supplied, use this format: Payment reference: [Invoice number] - [Client name]
+- If no due date is supplied, write: Payment due: 7 days from invoice date
+
+FORMAL PROVIDER DETAILS:
+Mediahubink Limited
+Company No. 17218602
+7 Tileyard North
+Wakefield
+WF1 5FY
+United Kingdom
+
+info@mediahubink.com
+07764 182758
+https://www.mediahubink.com
+
+VAT RULE:
+Mediahubink Limited is not currently VAT registered.
+No VAT is charged.
+Do not add VAT to prices.
+Do not write "plus VAT".
+Do not write "exclusive of VAT".
+
+INCLUDE THESE SECTIONS:
+1. Payment instructions
+2. Invoice reference
+3. Amount due
+4. Payment due date
+5. Payment method
+6. Bank transfer details
+7. Payment reference
+8. Confirmation request
+9. Formal contact details
+
+OUTPUT FORMAT:
+Clean markdown
+No tables
+Client-ready
+Formal
+Payment-ready`,
 };
 
 export default function HomePage() {
@@ -614,13 +708,16 @@ ${selectedMode}
 Instruction:
 ${modePrompts[selectedMode]}
 
+Mediahubink positioning:
+${mediahubinkPositioning}
+
 Permanent Alfred Knowledge:
 ${knowledgeContext}
 
-Current Mediahubink demo links:
+Current Mediahubink proof assets and demo links:
 ${demoContext}
 
-Current Mediahubink offers:
+Current Mediahubink enquiry system offers:
 ${offerContext}
 
 Current CRM-lite leads:
@@ -734,13 +831,16 @@ service-agreement
 Instruction:
 ${modePrompts["service-agreement"]}
 
+Mediahubink positioning:
+${mediahubinkPositioning}
+
 Permanent Alfred Knowledge:
 ${knowledgeContext}
 
-Current Mediahubink demo links:
+Current Mediahubink proof assets and demo links:
 ${demoContext}
 
-Current Mediahubink offers:
+Current Mediahubink enquiry system offers:
 ${offerContext}
 
 Current CRM-lite leads:
@@ -857,13 +957,16 @@ invoice-generator
 Instruction:
 ${modePrompts["invoice-generator"]}
 
+Mediahubink positioning:
+${mediahubinkPositioning}
+
 Permanent Alfred Knowledge:
 ${knowledgeContext}
 
-Current Mediahubink demo links:
+Current Mediahubink proof assets and demo links:
 ${demoContext}
 
-Current Mediahubink offers:
+Current Mediahubink enquiry system offers:
 ${offerContext}
 
 Current CRM-lite leads:
@@ -886,6 +989,131 @@ ${invoicePrompt}
       const data = await response.json();
       setReply(data.reply || data.error || "No response from Alfred.");
       setPrompt("Generate invoice from latest service agreement.");
+    } catch {
+      setReply("Something went wrong. Check the API route or Vercel logs.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+
+  async function generatePaymentInstructions() {
+    if (!reply.trim()) {
+      setCopyMessage("Generate an invoice or agreement first, then create payment instructions.");
+      return;
+    }
+
+    setMode("payment-instructions");
+    setLoading(true);
+    setSaveMessage("");
+    setCopyMessage("");
+    setReply("");
+
+    const paymentPrompt = `
+Create payment instructions from the document below.
+
+Use the document to extract:
+- client name
+- invoice number if present
+- service name
+- setup fee
+- monthly fee
+- total amount due
+- payment due date
+- VAT status
+
+If bank details are not supplied, do not invent them. Write: Bank details: To be supplied securely.
+Use the payment reference format: [Invoice number] - [Client name].
+Use payment-instructions mode rules exactly.
+
+Document content:
+${reply}
+`;
+
+    const demoContext =
+      demos.length > 0
+        ? demos.map((d) => `${d.vertical}: ${d.demo_url} | CTA: ${d.cta || ""}`).join("\n")
+        : "Context still loading...";
+
+    const offerContext =
+      offers.length > 0
+        ? offers.map((o) => `${o.name}: ${o.price || ""} | ${o.description || ""}`).join("\n")
+        : "Context still loading...";
+
+    const knowledgeContext =
+      knowledge.length > 0
+        ? knowledge.map((k) => `${k.category} - ${k.title}: ${k.content}`).join("\n")
+        : "Context still loading...";
+
+    const leadContext =
+      leads.length > 0
+        ? leads
+            .map(
+              (l) =>
+                `${l.company || l.name || "Unnamed lead"} |
+${l.industry || "No industry"} |
+Interest: ${l.interest || "None"} |
+Stage: ${l.stage || "new"} |
+Score: ${l.score || 0} |
+Priority: ${l.priority || "medium"} |
+Next: ${l.next_action || "none"} |
+Notes: ${l.notes || "none"}`
+            )
+            .join("\n")
+        : "No leads loaded.";
+
+    const projectContext =
+      projects.length > 0
+        ? projects
+            .map(
+              (p) =>
+                `${p.name}: ${p.url || ""} | ${
+                  p.category || ""
+                } | Audience: ${p.audience || ""} | ${p.description || ""}`
+            )
+            .join("\n")
+        : "Context still loading...";
+
+    const fullPrompt = `
+Mode:
+payment-instructions
+
+Instruction:
+${modePrompts["payment-instructions"]}
+
+Mediahubink positioning:
+${mediahubinkPositioning}
+
+Permanent Alfred Knowledge:
+${knowledgeContext}
+
+Current Mediahubink proof assets and demo links:
+${demoContext}
+
+Current Mediahubink enquiry system offers:
+${offerContext}
+
+Current CRM-lite leads:
+${leadContext}
+
+Current Projects and Demos:
+${projectContext}
+
+User thought/topic:
+${paymentPrompt}
+`;
+
+    try {
+      const response = await fetch("/api/alfred", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt }),
+      });
+
+      const data = await response.json();
+      setReply(data.reply || data.error || "No response from Alfred.");
+      setPrompt("Generate payment instructions from latest document.");
     } catch {
       setReply("Something went wrong. Check the API route or Vercel logs.");
     } finally {
@@ -1156,7 +1384,7 @@ ${invoicePrompt}
               className="input-box"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Create an invoice for Woodley Dentist for Fredi Capture+ setup fee £299 and first month £697."
+              placeholder="Example: Create an invoice for Woodley Dentist for Fredi Capture+ setup fee £299 and first month £697. Then generate payment instructions."
             />
 
             <div className="mode-grid">
@@ -1218,6 +1446,11 @@ ${invoicePrompt}
               <button className="mode" onClick={() => setMode("invoice-generator")}>
                 <strong>Invoice Generator</strong>
                 <span>Create formal Mediahubink invoices with no VAT charged.</span>
+              </button>
+
+              <button className="mode" onClick={() => setMode("payment-instructions")}>
+                <strong>Payment Instructions</strong>
+                <span>Create payment-ready instructions for client invoices.</span>
               </button>
             </div>
 
@@ -1292,6 +1525,15 @@ ${invoicePrompt}
                   title="Generate Invoice From Agreement"
                 >
                   <Clipboard size={18} />
+                </button>
+
+                <button
+                  className="icon-btn"
+                  onClick={generatePaymentInstructions}
+                  disabled={loading}
+                  title="Generate Payment Instructions"
+                >
+                  <Briefcase size={18} />
                 </button>
 
                 <button className="icon-btn" onClick={printProposal} title="Export Proposal PDF">
@@ -1374,6 +1616,10 @@ ${invoicePrompt}
 
                 <button className="mobile-action-btn" onClick={generateInvoiceFromAgreement} disabled={loading}>
                   <span>💷</span><strong>Invoice from agreement</strong>
+                </button>
+
+                <button className="mobile-action-btn" onClick={generatePaymentInstructions} disabled={loading}>
+                  <span>🏦</span><strong>Payment instructions</strong>
                 </button>
 
                 <button className="mobile-action-btn" onClick={printProposal} disabled={loading}>
