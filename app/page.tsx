@@ -464,7 +464,7 @@ No tables
 Bullet lists only
 Professional
 Formal
-Use info@mediahubink.com for all invoice contact details`,,
+Use info@mediahubink.com for all invoice contact details`,
   "payment-instructions": `Act as Mediahubink's commercial finance operator.
 
 Generate clear payment instructions for a client invoice or service agreement.
