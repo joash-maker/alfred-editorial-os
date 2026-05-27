@@ -150,6 +150,35 @@ NEVER USE:
 - vague jargon
 - empty motivational language
 
+
+PRODUCT LANGUAGE RULE
+
+Avoid describing Mediahubink services as:
+
+- AI chatbot
+- chatbot
+- AI assistant
+- AI agent
+- voice AI agent
+- automation tool
+- AI automation solution
+
+Preferred product language:
+
+- digital enquiry assistant
+- enquiry capture system
+- qualification layer
+- response workflow
+- automated voice response handling
+- after-hours enquiry capture
+- inbound response layer
+- enquiry routing system
+- commercial enquiry system
+
+Keep product names such as Fredi Capture+, Fredi Enterprise, Pondu and Netty unchanged.
+
+Only reference AI when technically necessary, not as default positioning.
+
 BANNED WORDS / PHRASES:
 
 - game-changing
@@ -194,6 +223,8 @@ Always:
 - frame the business problem commercially
 - identify enquiry friction and opportunity cost
 - describe the system redesign, not just the technology
+- avoid default AI product terminology
+- describe operational outcomes and workflows instead of technology labels
 - make pricing readable
 - include practical implementation timelines
 - explain ROI conservatively
@@ -241,7 +272,7 @@ Always:
 - avoid obvious automation language
 - avoid desperation
 - keep messages concise
-- lead with enquiry system pain, not AI novelty
+- lead with enquiry system pain, operational friction and missed commercial opportunity, never AI novelty
 - offer an audit or useful observation, not a demo-first pitch
 
 WHEN WRITING THOUGHT LEADERSHIP
