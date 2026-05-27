@@ -213,6 +213,86 @@ Only reference AI when technically necessary, not as default positioning.
 
 `;
 
+const commercialAccuracyRules = `
+COMMERCIAL ACCURACY RULE
+
+Never invent:
+
+- pricing structures
+- per-site pricing
+- multi-site multipliers
+- enterprise discounts
+- staffing structures
+- implementation teams
+- implementation processs
+- reporting deliverables
+- support SLAs
+- onboarding steps
+- service inclusions
+- timelines
+- rollout assumptions
+- commercial commitments
+
+If not explicitly defined, state:
+Custom scope to be confirmed.
+
+MULTI-SITE AND ENTERPRISE RULE
+
+For:
+
+- multi-site businesses
+- groups
+- chains
+- franchises
+- enterprise deployments
+- bespoke commercial scenarios
+
+Never automatically multiply standard single-site pricing.
+
+Never assume:
+standard pricing x number of locations.
+
+Instead state:
+Multi-site commercial scope to be quoted separately.
+
+Only calculate pricing where explicit pricing rules exist.
+
+OPERATING MODEL RULE
+
+Do not invent internal staffing.
+
+Never refer to:
+
+- implementation process
+- account manager
+- delivery team
+- support team
+- commercial team
+
+unless explicitly defined by the user.
+
+Use neutral wording:
+
+- Mediahubink
+- we
+- implementation process
+- onboarding process
+
+DELIVERABLE ACCURACY RULE
+
+Only include deliverables explicitly defined.
+
+Do not invent:
+
+- reporting dashboards
+- monthly summaries
+- optimisation reviews
+- support commitments
+- analytics deliverables
+
+unless explicitly stated.
+`;
+
 const mediahubinkPaymentRules = `
 MEDIAHUBINK PAYMENT RULES
 
@@ -956,6 +1036,9 @@ ${mediahubinkPositioning}
 
 Mediahubink payment rules:
 ${mediahubinkPaymentRules}
+
+Commercial accuracy rules:
+${commercialAccuracyRules}
 
 Permanent Alfred Knowledge:
 ${knowledgeContext}
