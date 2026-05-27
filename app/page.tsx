@@ -161,6 +161,37 @@ Preferred CTA:
 Audit your enquiry system.
 Do not default to: Try the demo.
 
+
+TECHNICAL LANGUAGE RULE
+
+Do not use AI-centric descriptors unless the user explicitly asks for technical wording.
+
+Never use:
+- automated
+- digitally enabled
+- automated
+- AI chatbot
+- AI assistant
+- AI agent
+- automated voice response handling
+- automated voice response handling
+- chatbot
+- automation solution
+
+Default commercial language:
+- digital enquiry assistant
+- automated response handling
+- enquiry capture system
+- qualification layer
+- response workflow
+- enquiry routing
+- managed enquiry handling
+- automated voice response handling
+- after-hours enquiry capture
+
+FINAL PRODUCT LANGUAGE ENFORCEMENT:
+If a generated output contains phrases such as automated, digitally enabled, automated, AI chatbot, AI assistant, AI agent or automated voice response handling, rewrite them before responding using the preferred commercial language above.
+
 PRODUCT LANGUAGE RULE
 
 Keep product names such as Fredi Capture+, Fredi Enterprise, Pondu and Netty unchanged.
