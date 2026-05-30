@@ -38,15 +38,21 @@ export default function ProposalPage() {
   return (
     <main className="proposal-page">
       <section className="proposal-toolbar no-print">
-        <button onClick={backToAlfred}>
-          <ArrowLeft size={18} />
-          Back to Alfred OS
-        </button>
+        <div className="proposal-toolbar-actions">
+          <button className="proposal-back-btn" onClick={backToAlfred}>
+            <ArrowLeft size={18} />
+            Back to Alfred OS
+          </button>
 
-        <button onClick={printProposal}>
-          <Printer size={18} />
-          Save as PDF
-        </button>
+          <button onClick={printProposal}>
+            <Printer size={18} />
+            Save as PDF
+          </button>
+        </div>
+
+        <p className="print-note">
+          Before sending to a client, untick "Headers and footers" in your browser print settings so the Alfred URL does not appear on the PDF.
+        </p>
       </section>
 
       <section className="proposal-cover">
@@ -54,16 +60,26 @@ export default function ProposalPage() {
           <p className="proposal-kicker">Mediahubink</p>
           <h1>Commercial Proposal</h1>
           <p className="proposal-subtitle">
-            Enquiry systems for lead capture, qualification and business growth.
+            Commercial enquiry systems for lead capture, qualification and business development.
           </p>
         </div>
 
         <div className="proposal-meta">
-          <p><strong>Prepared by:</strong> Joash F. Perera</p>
-          <p><strong>Company:</strong> Mediahubink Limited</p>
-          <p><strong>Date:</strong> {today}</p>
-          <p><strong>Reference:</strong> {proposalRef}</p>
-          <p><strong>Status:</strong> Confidential</p>
+          <p>
+            <strong>Prepared by:</strong> Joash F. Perera
+          </p>
+          <p>
+            <strong>Company:</strong> Mediahubink Limited
+          </p>
+          <p>
+            <strong>Date:</strong> {today}
+          </p>
+          <p>
+            <strong>Reference:</strong> {proposalRef}
+          </p>
+          <p>
+            <strong>Status:</strong> Confidential
+          </p>
         </div>
       </section>
 
