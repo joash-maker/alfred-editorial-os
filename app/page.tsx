@@ -1571,6 +1571,9 @@ ${paymentPrompt}
               <a className="btn" href="#quick-create">
                 Open Quick Create
               </a>
+              <a className="btn btn-secondary" href="/strategy">
+                Strategy
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
