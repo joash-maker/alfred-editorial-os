@@ -1577,6 +1577,9 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/pipeline">
                 Pipeline
               </a>
+              <a className="btn btn-secondary" href="/signal-log">
+                Signal Log
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
