@@ -1,10 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
 
 export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
 
@@ -31,7 +34,7 @@ export async function PATCH(
         stage: body.stage || "new",
         notes: body.notes || null,
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
