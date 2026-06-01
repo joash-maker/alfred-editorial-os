@@ -1285,3 +1285,87 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Strategy page alignment */
+
+.strategy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.strategy-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.strategy-card-heading h2 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.strategy-quote {
+  margin: 0;
+  border-left: 4px solid #f5f5f5;
+  padding-left: 18px;
+  color: #e5e5e5;
+  font-size: 22px;
+  line-height: 1.55;
+  max-width: 900px;
+}
+
+/* CRM lead editing */
+
+.lead-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lead-edit-btn {
+  border: 1px solid #333;
+  background: #111;
+  color: #f5f5f5;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lead-edit-btn:hover {
+  background: #1a1a1a;
+  border-color: #555;
+}
+
+.lead-status-label {
+  display: grid;
+  gap: 6px;
+  color: #a3a3a3;
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.lead-status-select {
+  border: 1px solid #333;
+  background: #080808;
+  color: #f5f5f5;
+  border-radius: 12px;
+  padding: 10px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .strategy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .strategy-quote {
+    font-size: 18px;
+  }
+}
