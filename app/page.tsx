@@ -1580,6 +1580,9 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/signal-log">
                 Signal Log
               </a>
+              <a className="btn btn-secondary" href="/market-intelligence">
+                Market Intelligence
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
