@@ -946,3 +946,107 @@ h1 {
     flex-direction: column;
   }
 }
+
+
+/* Signal Log page */
+
+.signal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.signal-card {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 22px;
+  padding: 20px;
+}
+
+.signal-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.signal-card h2 {
+  margin: 4px 0 4px;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.signal-card-top span {
+  color: #a3a3a3;
+  font-size: 14px;
+}
+
+.signal-label {
+  margin: 0;
+  color: #a3a3a3;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.signal-priority {
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #f5f5f5;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.signal-priority.strategic {
+  background: #f5f5f5;
+  color: #050505;
+  border-color: #f5f5f5;
+}
+
+.signal-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #d4d4d4;
+  font-size: 14px;
+  margin: 10px 0 18px;
+}
+
+.signal-block {
+  border-top: 1px solid #262626;
+  padding-top: 14px;
+  margin-top: 14px;
+}
+
+.signal-block p {
+  margin: 0 0 8px;
+  color: #737373;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.signal-block strong {
+  color: #f5f5f5;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.signal-date {
+  margin-top: 18px;
+  color: #737373;
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .signal-card-top {
+    flex-direction: column;
+  }
+}
