@@ -759,6 +759,7 @@ export default function HomePage() {
   const [leadInterest, setLeadInterest] = useState("");
   const [leadStage, setLeadStage] = useState("new");
   const [leadNotes, setLeadNotes] = useState("");
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
 
   async function copyText(text: string, label: string) {
     if (!text.trim()) {
@@ -1486,13 +1487,41 @@ ${paymentPrompt}
     }
   }
 
+
+  function editLead(lead: Lead) {
+    setEditingLeadId(lead.id);
+    setLeadName(lead.name || "");
+    setLeadCompany(lead.company || "");
+    setLeadEmail(lead.email || "");
+    setLeadPhone(lead.phone || "");
+    setLeadIndustry(lead.industry || "");
+    setLeadInterest(lead.interest || "");
+    setLeadStage(lead.stage || "new");
+    setLeadNotes(lead.notes || "");
+    setLeadMessage(`Editing ${lead.company || lead.name || "lead"}.`);
+    document.getElementById("crm")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function cancelLeadEdit() {
+    setEditingLeadId(null);
+    setLeadName("");
+    setLeadCompany("");
+    setLeadEmail("");
+    setLeadPhone("");
+    setLeadIndustry("");
+    setLeadInterest("");
+    setLeadStage("new");
+    setLeadNotes("");
+    setLeadMessage("");
+  }
+
   async function saveLead() {
     setSavingLead(true);
     setLeadMessage("");
 
     try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
+      const response = await fetch(editingLeadId ? `/api/leads/${editingLeadId}` : "/api/leads", {
+        method: editingLeadId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: leadName,
@@ -1514,7 +1543,7 @@ ${paymentPrompt}
         return;
       }
 
-      setLeadMessage("Lead saved.");
+      setLeadMessage(editingLeadId ? "Lead updated." : "Lead saved.");
       setLeadName("");
       setLeadCompany("");
       setLeadEmail("");
@@ -1523,6 +1552,7 @@ ${paymentPrompt}
       setLeadInterest("");
       setLeadStage("new");
       setLeadNotes("");
+      setEditingLeadId(null);
       loadLeads();
     } catch {
       setLeadMessage("Something went wrong saving the lead.");
@@ -1959,7 +1989,9 @@ ${paymentPrompt}
         </section>
 
         <section className="card" id="crm" style={{ marginTop: "28px" }}>
-          <div className="panel-title">CRM-lite</div>
+          <div className="panel-title">
+            CRM-lite {editingLeadId ? "· Editing Lead" : ""}
+          </div>
 
           <div className="mode-grid">
             <input className="input-box" style={{ minHeight: "52px" }} value={leadName} onChange={(e) => setLeadName(e.target.value)} placeholder="Contact name" />
@@ -1971,9 +2003,12 @@ ${paymentPrompt}
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
               <option value="new">New</option>
+              <option value="discovery">Discovery</option>
               <option value="contacted">Contacted</option>
               <option value="demo-interest">Demo Interest</option>
-              <option value="proposal">Proposal</option>
+              <option value="proposal-sent">Proposal Sent</option>
+              <option value="negotiation">Negotiation</option>
+              <option value="relationship-building">Relationship Building</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
             </select>
@@ -1983,8 +2018,14 @@ ${paymentPrompt}
 
           <div className="actions" style={{ marginTop: "18px" }}>
             <button className="btn" onClick={saveLead} disabled={savingLead}>
-              {savingLead ? "Saving lead..." : "Save Lead"}
+              {savingLead ? "Saving lead..." : editingLeadId ? "Update Lead" : "Save Lead"}
             </button>
+
+            {editingLeadId && (
+              <button className="btn btn-secondary" onClick={cancelLeadEdit}>
+                Cancel Edit
+              </button>
+            )}
 
             <button className="btn btn-secondary" onClick={loadLeads} disabled={loadingLeads}>
               {loadingLeads ? "Loading..." : "Load Leads"}
@@ -2018,14 +2059,41 @@ ${paymentPrompt}
           {leads.length > 0 && (
             <div className="mode-grid" style={{ marginTop: "18px" }}>
               {leads.map((lead) => (
-                <div className="mode" key={lead.id}>
-                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                <div className="mode lead-card" key={lead.id}>
+                  <div className="lead-card-header">
+                    <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                    <button className="lead-edit-btn" onClick={() => editLead(lead)}>
+                      Edit
+                    </button>
+                  </div>
+
                   <span>Contact: {lead.name || "Not added"}</span>
                   <span>Email: {lead.email || "Not added"}</span>
                   <span>Phone: {lead.phone || "Not added"}</span>
                   <span>Industry: {lead.industry || "Not added"}</span>
                   <span>Interest: {lead.interest || "Not added"}</span>
-                  <span>Stage: {lead.stage || "new"}</span>
+
+                  <label className="lead-status-label">
+                    Status
+                    <select
+                      className="lead-status-select"
+                      value={lead.stage || "new"}
+                      onChange={(e) => {
+                        editLead({ ...lead, stage: e.target.value });
+                      }}
+                    >
+                      <option value="new">New</option>
+                      <option value="discovery">Discovery</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="demo-interest">Demo Interest</option>
+                      <option value="proposal-sent">Proposal Sent</option>
+                      <option value="negotiation">Negotiation</option>
+                      <option value="relationship-building">Relationship Building</option>
+                      <option value="won">Won</option>
+                      <option value="lost">Lost</option>
+                    </select>
+                  </label>
+
                   <span>Score: {lead.score ?? 0}</span>
                   <span>Priority: {lead.priority || "medium"}</span>
                   <span>Next action: {lead.next_action || "Not added"}</span>
