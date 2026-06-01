@@ -1583,6 +1583,9 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/market-intelligence">
                 Market Intelligence
               </a>
+              <a className="btn btn-secondary" href="/analytics">
+                Analytics
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
