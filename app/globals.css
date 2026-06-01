@@ -1050,3 +1050,109 @@ h1 {
     flex-direction: column;
   }
 }
+
+
+/* Market Intelligence page */
+
+.market-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.market-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.market-card-header h2 {
+  margin: 3px 0 0;
+  font-size: 28px;
+  letter-spacing: -0.05em;
+}
+
+.market-label {
+  margin: 0;
+  color: #a3a3a3;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.market-block {
+  border-top: 1px solid #262626;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.market-block h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.market-block p,
+.market-block li {
+  color: #d4d4d4;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.market-block ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.market-note {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 18px;
+  padding: 16px;
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.market-note strong {
+  color: #f5f5f5;
+}
+
+.market-note span {
+  color: #d4d4d4;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.market-opportunity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.market-opportunity-card {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 22px;
+  padding: 20px;
+}
+
+.market-opportunity-card h3 {
+  margin: 14px 0 10px;
+  font-size: 17px;
+}
+
+.market-opportunity-card p {
+  margin: 0;
+  color: #a3a3a3;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .market-grid,
+  .market-opportunity-grid {
+    grid-template-columns: 1fr;
+  }
+}
