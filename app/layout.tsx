@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import BackToTop from "../components/BackToTop";
 
 export const metadata: Metadata = {
-  title: "Alfred | Mediahubink Editorial OS",
-  description: "AI editorial, growth and sales chief of staff for Mediahubink.",
+  title: "Alfred OS",
+  description: "Mediahubink operating system",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <BackToTop />
+      </body>
     </html>
   );
 }
