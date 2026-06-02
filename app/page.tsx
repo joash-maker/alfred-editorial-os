@@ -746,6 +746,7 @@ export default function HomePage() {
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadMessage, setLeadMessage] = useState("");
   const [savingLead, setSavingLead] = useState(false);
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -1515,6 +1516,45 @@ ${paymentPrompt}
     setLeadMessage("");
   }
 
+
+  async function deleteLead(lead: Lead) {
+    const label = lead.company || lead.name || "this lead";
+
+    const confirmed = window.confirm(
+      `Delete ${label}? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingLeadId(lead.id);
+    setLeadMessage("");
+
+    try {
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLeadMessage(data.error || "Could not delete lead.");
+        return;
+      }
+
+      setLeadMessage(`${label} deleted.`);
+
+      if (editingLeadId === lead.id) {
+        cancelLeadEdit();
+      }
+
+      loadLeads();
+    } catch {
+      setLeadMessage("Something went wrong deleting the lead.");
+    } finally {
+      setDeletingLeadId(null);
+    }
+  }
+
   async function saveLead() {
     setSavingLead(true);
     setLeadMessage("");
@@ -2062,9 +2102,20 @@ ${paymentPrompt}
                 <div className="mode lead-card" key={lead.id}>
                   <div className="lead-card-header">
                     <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
-                    <button className="lead-edit-btn" onClick={() => editLead(lead)}>
-                      Edit
-                    </button>
+
+                    <div className="lead-card-actions">
+                      <button className="lead-edit-btn" onClick={() => editLead(lead)}>
+                        Edit
+                      </button>
+
+                      <button
+                        className="lead-delete-btn"
+                        onClick={() => deleteLead(lead)}
+                        disabled={deletingLeadId === lead.id}
+                      >
+                        {deletingLeadId === lead.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
 
                   <span>Contact: {lead.name || "Not added"}</span>
