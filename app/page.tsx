@@ -1726,6 +1726,9 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/knowledge-base">
                 Knowledge Base
               </a>
+              <a className="btn btn-secondary" href="/daily-briefing">
+                Daily Briefing
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
