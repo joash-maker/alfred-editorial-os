@@ -100,10 +100,14 @@ type Lead = {
   notes: string | null;
   follow_up_date: string | null;
   estimated_value: number | null;
+  monthly_value: number | null;
   score: number | null;
+  lead_score: number | null;
   priority: string | null;
   next_action: string | null;
+  next_action_date: string | null;
   last_contacted: string | null;
+  region: string | null;
 };
 
 type Project = {
@@ -760,6 +764,12 @@ export default function HomePage() {
   const [leadInterest, setLeadInterest] = useState("");
   const [leadStage, setLeadStage] = useState("new");
   const [leadNotes, setLeadNotes] = useState("");
+  const [leadMonthlyValue, setLeadMonthlyValue] = useState("");
+  const [leadNextAction, setLeadNextAction] = useState("");
+  const [leadNextActionDate, setLeadNextActionDate] = useState("");
+  const [leadScore, setLeadScore] = useState("");
+  const [leadSource, setLeadSource] = useState("LinkedIn");
+  const [leadRegion, setLeadRegion] = useState("United Kingdom");
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
 
   async function copyText(text: string, label: string) {
@@ -880,9 +890,13 @@ export default function HomePage() {
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
 Stage: ${l.stage || "new"} |
-Score: ${l.score || 0} |
+Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
+Lead Score: ${l.lead_score ?? l.score ?? 0} |
+Source: ${l.source || "none"} |
+Region: ${l.region || "none"} |
 Priority: ${l.priority || "medium"} |
 Next: ${l.next_action || "none"} |
+Next Action Date: ${l.next_action_date || l.follow_up_date || "none"} |
 Notes: ${l.notes || "none"}`
             )
             .join("\n")
@@ -1006,9 +1020,13 @@ ${reply}
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
 Stage: ${l.stage || "new"} |
-Score: ${l.score || 0} |
+Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
+Lead Score: ${l.lead_score ?? l.score ?? 0} |
+Source: ${l.source || "none"} |
+Region: ${l.region || "none"} |
 Priority: ${l.priority || "medium"} |
 Next: ${l.next_action || "none"} |
+Next Action Date: ${l.next_action_date || l.follow_up_date || "none"} |
 Notes: ${l.notes || "none"}`
             )
             .join("\n")
@@ -1138,9 +1156,13 @@ ${reply}
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
 Stage: ${l.stage || "new"} |
-Score: ${l.score || 0} |
+Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
+Lead Score: ${l.lead_score ?? l.score ?? 0} |
+Source: ${l.source || "none"} |
+Region: ${l.region || "none"} |
 Priority: ${l.priority || "medium"} |
 Next: ${l.next_action || "none"} |
+Next Action Date: ${l.next_action_date || l.follow_up_date || "none"} |
 Notes: ${l.notes || "none"}`
             )
             .join("\n")
@@ -1266,9 +1288,13 @@ ${reply}
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
 Stage: ${l.stage || "new"} |
-Score: ${l.score || 0} |
+Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
+Lead Score: ${l.lead_score ?? l.score ?? 0} |
+Source: ${l.source || "none"} |
+Region: ${l.region || "none"} |
 Priority: ${l.priority || "medium"} |
 Next: ${l.next_action || "none"} |
+Next Action Date: ${l.next_action_date || l.follow_up_date || "none"} |
 Notes: ${l.notes || "none"}`
             )
             .join("\n")
@@ -1499,6 +1525,24 @@ ${paymentPrompt}
     setLeadInterest(lead.interest || "");
     setLeadStage(lead.stage || "new");
     setLeadNotes(lead.notes || "");
+    setLeadMonthlyValue(
+      lead.monthly_value !== null && lead.monthly_value !== undefined
+        ? String(lead.monthly_value)
+        : lead.estimated_value !== null && lead.estimated_value !== undefined
+          ? String(lead.estimated_value)
+          : ""
+    );
+    setLeadNextAction(lead.next_action || "");
+    setLeadNextActionDate(lead.next_action_date || lead.follow_up_date || "");
+    setLeadScore(
+      lead.lead_score !== null && lead.lead_score !== undefined
+        ? String(lead.lead_score)
+        : lead.score !== null && lead.score !== undefined
+          ? String(lead.score)
+          : ""
+    );
+    setLeadSource(lead.source || "LinkedIn");
+    setLeadRegion(lead.region || "United Kingdom");
     setLeadMessage(`Editing ${lead.company || lead.name || "lead"}.`);
     document.getElementById("crm")?.scrollIntoView({ behavior: "smooth" });
   }
@@ -1513,6 +1557,12 @@ ${paymentPrompt}
     setLeadInterest("");
     setLeadStage("new");
     setLeadNotes("");
+    setLeadMonthlyValue("");
+    setLeadNextAction("");
+    setLeadNextActionDate("");
+    setLeadScore("");
+    setLeadSource("LinkedIn");
+    setLeadRegion("United Kingdom");
     setLeadMessage("");
   }
 
@@ -1569,10 +1619,18 @@ ${paymentPrompt}
           email: leadEmail,
           phone: leadPhone,
           industry: leadIndustry,
-          source: "alfred-dashboard",
+          source: leadSource,
           interest: leadInterest,
           stage: leadStage,
           notes: leadNotes,
+          monthly_value: leadMonthlyValue ? Number(leadMonthlyValue) : null,
+          estimated_value: leadMonthlyValue ? Number(leadMonthlyValue) : null,
+          next_action: leadNextAction,
+          next_action_date: leadNextActionDate || null,
+          follow_up_date: leadNextActionDate || null,
+          lead_score: leadScore ? Number(leadScore) : null,
+          score: leadScore ? Number(leadScore) : null,
+          region: leadRegion,
         }),
       });
 
@@ -1592,6 +1650,12 @@ ${paymentPrompt}
       setLeadInterest("");
       setLeadStage("new");
       setLeadNotes("");
+      setLeadMonthlyValue("");
+      setLeadNextAction("");
+      setLeadNextActionDate("");
+      setLeadScore("");
+      setLeadSource("LinkedIn");
+      setLeadRegion("United Kingdom");
       setEditingLeadId(null);
       loadLeads();
     } catch {
@@ -2041,19 +2105,58 @@ ${paymentPrompt}
             <input className="input-box" style={{ minHeight: "52px" }} value={leadCompany} onChange={(e) => setLeadCompany(e.target.value)} placeholder="Company" />
             <input className="input-box" style={{ minHeight: "52px" }} value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} placeholder="Email" />
             <input className="input-box" style={{ minHeight: "52px" }} value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} placeholder="Phone" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadIndustry} onChange={(e) => setLeadIndustry(e.target.value)} placeholder="Industry" />
-            <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi, voice agent, demo" />
+
+            <select className="input-box" style={{ minHeight: "52px" }} value={leadIndustry} onChange={(e) => setLeadIndustry(e.target.value)}>
+              <option value="">Select industry</option>
+              <option value="Trades">Trades</option>
+              <option value="Dental">Dental</option>
+              <option value="Estate Agents">Estate Agents</option>
+              <option value="Schools">Schools</option>
+              <option value="Serviced Offices">Serviced Offices</option>
+              <option value="Veterinary">Veterinary</option>
+              <option value="SADC">SADC</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi Capture+, demo, audit" />
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
               <option value="new">New</option>
-              <option value="discovery">Discovery</option>
               <option value="contacted">Contacted</option>
+              <option value="discovery">Discovery</option>
               <option value="demo-interest">Demo Interest</option>
               <option value="proposal-sent">Proposal Sent</option>
               <option value="negotiation">Negotiation</option>
-              <option value="relationship-building">Relationship Building</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
+              <option value="relationship-building">Relationship Building</option>
+            </select>
+
+            <input className="input-box" style={{ minHeight: "52px" }} type="number" min="0" value={leadMonthlyValue} onChange={(e) => setLeadMonthlyValue(e.target.value)} placeholder="Monthly Value (£), e.g. 397, 697, 4000" />
+            <input className="input-box" style={{ minHeight: "52px" }} value={leadNextAction} onChange={(e) => setLeadNextAction(e.target.value)} placeholder="Next Action, e.g. Follow up proposal" />
+            <input className="input-box" style={{ minHeight: "52px" }} type="date" value={leadNextActionDate} onChange={(e) => setLeadNextActionDate(e.target.value)} />
+            <input className="input-box" style={{ minHeight: "52px" }} type="number" min="0" max="40" value={leadScore} onChange={(e) => setLeadScore(e.target.value)} placeholder="Lead Score (0-40)" />
+
+            <select className="input-box" style={{ minHeight: "52px" }} value={leadSource} onChange={(e) => setLeadSource(e.target.value)}>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Referral">Referral</option>
+              <option value="Website">Website</option>
+              <option value="Substack">Substack</option>
+              <option value="Network">Network</option>
+              <option value="Cold Outreach">Cold Outreach</option>
+              <option value="Partner">Partner</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <select className="input-box" style={{ minHeight: "52px" }} value={leadRegion} onChange={(e) => setLeadRegion(e.target.value)}>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="SADC">SADC</option>
+              <option value="Namibia">Namibia</option>
+              <option value="Zambia">Zambia</option>
+              <option value="South Africa">South Africa</option>
+              <option value="DRC">DRC</option>
+              <option value="Zimbabwe">Zimbabwe</option>
+              <option value="Other">Other</option>
             </select>
 
             <textarea className="input-box" value={leadNotes} onChange={(e) => setLeadNotes(e.target.value)} placeholder="Notes" />
@@ -2094,8 +2197,10 @@ ${paymentPrompt}
             </div>
 
             <div className="mini-card">
-              <h3>Next Upgrade</h3>
-              <p>Add follow-up dates and Alfred reminders.</p>
+              <h3>Potential MRR</h3>
+              <p>
+                £{leads.reduce((total, lead) => total + Number(lead.monthly_value ?? lead.estimated_value ?? 0), 0).toLocaleString("en-GB")}
+              </p>
             </div>
           </div>
 
@@ -2126,6 +2231,9 @@ ${paymentPrompt}
                   <span>Phone: {lead.phone || "Not added"}</span>
                   <span>Industry: {lead.industry || "Not added"}</span>
                   <span>Interest: {lead.interest || "Not added"}</span>
+                  <span>Monthly value: £{Number(lead.monthly_value ?? lead.estimated_value ?? 0).toLocaleString("en-GB")}</span>
+                  <span>Source: {lead.source || "Not added"}</span>
+                  <span>Region: {lead.region || "Not added"}</span>
 
                   <label className="lead-status-label">
                     Status
@@ -2148,9 +2256,10 @@ ${paymentPrompt}
                     </select>
                   </label>
 
-                  <span>Score: {lead.score ?? 0}</span>
+                  <span>Lead score: {lead.lead_score ?? lead.score ?? 0}</span>
                   <span>Priority: {lead.priority || "medium"}</span>
                   <span>Next action: {lead.next_action || "Not added"}</span>
+                  <span>Next action date: {lead.next_action_date || lead.follow_up_date || "Not added"}</span>
                   <span>{lead.notes || ""}</span>
                 </div>
               ))}
