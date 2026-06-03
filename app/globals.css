@@ -1487,3 +1487,68 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Knowledge Base page */
+
+.knowledge-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.knowledge-heading h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.05em;
+}
+
+.knowledge-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.knowledge-card {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 22px;
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.knowledge-card h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+.knowledge-card strong {
+  font-size: 18px;
+  color: #f5f5f5;
+}
+
+.knowledge-card p {
+  margin: 0;
+  color: #d4d4d4;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.knowledge-card span {
+  color: #a3a3a3;
+  line-height: 1.45;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .knowledge-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-heading {
+    flex-direction: column;
+  }
+}
