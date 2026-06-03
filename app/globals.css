@@ -1431,3 +1431,59 @@ h1 {
     flex-direction: column;
   }
 }
+
+
+/* Step 24 live CRM pipeline upgrades */
+
+.pipeline-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.pipeline-stage {
+  border: 1px solid #262626;
+  background: #080808;
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.pipeline-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.pipeline-stage-header h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.04em;
+}
+
+.pipeline-stage-header span {
+  background: #f5f5f5;
+  color: #050505;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.pipeline-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.pipeline-empty {
+  color: #737373;
+  margin: 0;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .pipeline-stage-grid {
+    grid-template-columns: 1fr;
+  }
+}
