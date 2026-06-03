@@ -1723,6 +1723,9 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/operating-manual">
                 Operating Manual
               </a>
+              <a className="btn btn-secondary" href="/knowledge-base">
+                Knowledge Base
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
