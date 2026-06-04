@@ -1610,3 +1610,197 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Creative Desk OS */
+
+.creative-desk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.creative-desk-card {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 22px;
+  padding: 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.creative-desk-card span {
+  color: #a3a3a3;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.creative-desk-card strong {
+  color: #f5f5f5;
+  font-size: 24px;
+  letter-spacing: -0.05em;
+}
+
+.creative-desk-card p {
+  color: #d4d4d4;
+  margin: 0;
+}
+
+.creative-desk-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.creative-desk-heading h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.05em;
+}
+
+.creative-step-list {
+  display: grid;
+  gap: 10px;
+}
+
+.creative-step {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.creative-step span {
+  color: #a3a3a3;
+  font-weight: 900;
+}
+
+.creative-step strong {
+  color: #f5f5f5;
+}
+
+.creative-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.creative-tab {
+  border: 1px solid #333;
+  background: #111;
+  color: #f5f5f5;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 900;
+}
+
+.creative-tab.active,
+.creative-tab:hover {
+  background: #f5f5f5;
+  color: #050505;
+}
+
+.creative-prompt-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.creative-prompt-card {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 22px;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.creative-prompt-card p {
+  margin: 0;
+  color: #a3a3a3;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+.creative-prompt-card h3 {
+  margin: 4px 0 0;
+  color: #f5f5f5;
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.creative-prompt-card span {
+  color: #d4d4d4;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.creative-rotation-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.creative-rotation-card {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.creative-rotation-card strong {
+  color: #f5f5f5;
+}
+
+.creative-rotation-card span,
+.creative-note {
+  color: #a3a3a3;
+  line-height: 1.5;
+}
+
+.creative-note {
+  margin: 18px 0 0;
+}
+
+.creative-checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.creative-checklist label {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #f5f5f5;
+}
+
+.creative-checklist input {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .creative-desk-grid,
+  .creative-rotation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .creative-desk-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
