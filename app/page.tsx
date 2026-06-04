@@ -1729,6 +1729,12 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/daily-briefing">
                 Daily Briefing
               </a>
+              <a className="btn btn-secondary" href="/creative-desk">
+                Creative Desk OS
+              </a>
+              <a className="btn btn-secondary" href="/creative-desk/generator">
+                Creative Desk Generator
+              </a>
               <a className="btn btn-secondary" href="#projects">
                 View Projects
               </a>
