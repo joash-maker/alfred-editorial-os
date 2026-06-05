@@ -1,135 +1,198 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   BookOpen,
   CalendarDays,
-  CheckSquare,
   Clipboard,
   Image as ImageIcon,
-  MailPlus,
-  RotateCcw,
-  Sparkles,
+  Wand2,
 } from "lucide-react";
 
-type PromptItem = {
-  title: string;
-  use: string;
-  prompt: string;
+type PostType = "Sunday" | "Tuesday" | "Thursday";
+
+const postConfig = {
+  Sunday: {
+    label: "Sunday Reset",
+    icon: "🌿",
+    mood: "Reflective. Discipline. Perspective.",
+    positioning:
+      "A calm, reflective reset that helps the reader slow down, regain perspective and return to the week with clarity.",
+    imagePrompt:
+      "A detailed, realistic photograph of a narrow footpath cutting through open Yorkshire moorland in early morning. Low mist sits in the valley below and the grass beside the path is worn short. No person visible. Camera low at path level, looking toward the mist-filled valley. Solitary, unhurried atmosphere. Wide natural-light landscape photograph, cool blue-grey morning tones, heather, mist and pale gold palette. 16:9 horizontal.",
+    postAngle:
+      "Use a personal reflection, ordinary scene or quiet moment. Include one Scripture reference if appropriate. Keep it faith-rooted but not preachy.",
+    linkedinEnd:
+      "I break down the full reset in today’s Sunday piece. Link in comments.",
+    instagramPrompt:
+      "Slide 1: The feeling. Slide 2: The mistake. Slide 3: The reset. Slide 4: The quiet question. Slide 5: Read the full piece on The Creative Desk.",
+  },
+  Tuesday: {
+    label: "Tuesday Creative Guide",
+    icon: "🧠",
+    mood: "Structure. Positioning. Long-term thinking.",
+    positioning:
+      "A practical guide that helps founders, creatives and operators think more clearly and make better creative decisions.",
+    imagePrompt:
+      "A detailed, realistic photograph of a single sheet of cream paper covered in dense handwriting, words crossed out, arrows connecting ideas, one phrase circled twice in darker ink. The paper rests flat on a worn dark oak desk. The camera is positioned directly overhead, slightly off-centre. The atmosphere is quiet and cerebral, the feeling of a mind working through something difficult in private. Modern editorial photograph, natural diffused morning light, muted cream, charcoal and rust palette. 16:9 horizontal. No faces. No readable text.",
+    postAngle:
+      "Use a grounded real-world moment, diagnose the deeper issue, then offer a named framework with 3 to 4 clear steps.",
+    linkedinEnd:
+      "I break down the full framework in today’s Creative Guide. Link in comments.",
+    instagramPrompt:
+      "Slide 1: The problem. Slide 2: The mistake most people make. Slide 3: The better way. Slide 4: The framework. Slide 5: Read the caption for the fix.",
+  },
+  Thursday: {
+    label: "Thursday Tech",
+    icon: "⚙️",
+    mood: "Tools. Workflow. What actually works.",
+    positioning:
+      "A practical operator briefing that explains tools, systems and workflows without hype.",
+    imagePrompt:
+      "A detailed, realistic photograph of a plain wooden desk from directly above. A single open notebook has a hand-drawn system diagram, a mechanical pencil rests across the page, and three index cards sit beside it. Focused, deliberate atmosphere. Modern flat-lay editorial photograph, soft directional natural light, pale wood, cream and grey palette. 16:9 horizontal. No faces. No readable text.",
+    postAngle:
+      "Start with operational friction. Explain why the friction persists. Offer a simple workflow, tool stack or decision model.",
+    linkedinEnd:
+      "I break down the full system in today’s Tech post. Link in comments.",
+    instagramPrompt:
+      "Slide 1: The workflow problem. Slide 2: The tool mistake. Slide 3: The simpler system. Slide 4: What to keep. Slide 5: What to drop.",
+  },
 };
 
-const promptGroups: Record<"Tuesday" | "Thursday" | "Sunday", PromptItem[]> = {
-  Tuesday: [
-    {
-      title: "Tuesday Prompt 1",
-      use: "Week 1",
-      prompt: "A detailed, realistic photograph of a single sheet of cream paper covered in dense handwriting, words crossed out, arrows connecting ideas, one phrase circled twice in darker ink. The paper rests flat on a worn dark oak desk. The camera is positioned directly overhead, slightly off-centre. The atmosphere is quiet and cerebral, the feeling of a mind working through something difficult in private. Modern editorial photograph, natural diffused morning light, muted cream, charcoal and rust palette. 16:9 horizontal. No faces. No readable text.",
-    },
-    {
-      title: "Tuesday Prompt 2",
-      use: "Week 2",
-      prompt: "A detailed, realistic photograph of a worn hardback book lying open on a stone windowsill. A single sentence on the left page has been underlined carefully in pencil, but the words are not readable. Soft overcast British daylight through the glass. Still, contemplative atmosphere. Quiet natural-light editorial photograph, slate, cream and faded ochre palette. 16:9 horizontal. No faces. No readable text.",
-    },
-    {
-      title: "Tuesday Prompt 3",
-      use: "Week 3",
-      prompt: "A detailed, realistic photograph of a brass compass resting on a hand-drawn working map on kraft paper with notes in the margins, distances crossed out and corrected, and a route traced in pencil. The camera looks down at a slight angle. Purposeful, mid-process atmosphere. Modern documentary photograph, warm natural light, parchment, deep brown and dull gold palette. 16:9 horizontal. No faces. No readable text.",
-    },
-    {
-      title: "Tuesday Prompt 4",
-      use: "Week 4",
-      prompt: "A detailed, realistic photograph of two identical plain ceramic mugs on an outdoor stone table, one full of black coffee and one empty. Between them sits a single folded white paper, unread. Blurred British street background, grey pavement, low sky. Suspended and suggestive atmosphere. Candid documentary photograph, cool overcast tones, white, grey and slate palette. 16:9 horizontal. No faces.",
-    },
-    {
-      title: "Tuesday Prompt 5",
-      use: "Week 5",
-      prompt: "A detailed, realistic photograph of a large whiteboard mounted on a plain wall. Three words are written in thick black marker but intentionally illegible. A single empty chair is visible in the lower foreground, slightly out of focus. Spare and deliberate atmosphere, a room where a decision has just been made. Modern architectural photograph, flat cool daylight, white, pale grey and deep charcoal palette. 16:9 horizontal. No faces. No readable text.",
-    },
-  ],
-  Thursday: [
-    {
-      title: "Thursday Prompt 1",
-      use: "Week 1",
-      prompt: "A detailed, realistic photograph of a mechanic's pegboard tool wall. Tools are hung in exact order, each outlined by a faint shadow, with one tool missing from its hook. Camera straight on, centred on the missing tool space. Precise, purposeful atmosphere. Modern industrial editorial photograph, warm workshop lighting, steel grey, black rubber and off-white palette. 16:9 horizontal. No faces.",
-    },
-    {
-      title: "Thursday Prompt 2",
-      use: "Week 2",
-      prompt: "A detailed, realistic photograph of a hand-drawn flowchart pinned to a corkboard, with boxes, arrows and one diamond-shaped decision point. Two yellow sticky notes sit at slightly different angles with unreadable handwriting. Active, iterative atmosphere. Candid documentary photograph, flat office light, kraft, blue and yellow palette. 16:9 horizontal. No faces. No readable text.",
-    },
-    {
-      title: "Thursday Prompt 3",
-      use: "Week 3",
-      prompt: "A detailed, realistic photograph of a single green indicator light blinking on a server unit in an otherwise dark room. Slightly long exposure gives a faint trail of green light. Quietly powerful atmosphere, something running reliably while everyone sleeps. Long-exposure documentary photograph, deep blue-black shadows, single sharp green light. 16:9 horizontal. No faces.",
-    },
-    {
-      title: "Thursday Prompt 4",
-      use: "Week 4",
-      prompt: "A detailed, realistic photograph of a plain wooden desk from directly above. A single open notebook has a hand-drawn system diagram, a mechanical pencil rests across the page, and three index cards sit beside it. Focused, deliberate atmosphere. Modern flat-lay editorial photograph, soft directional natural light, pale wood, cream and grey palette. 16:9 horizontal. No faces. No readable text.",
-    },
-    {
-      title: "Thursday Prompt 5",
-      use: "Week 5",
-      prompt: "A detailed, realistic photograph of a tangle of cables on a plain grey concrete floor, photographed from directly above. Muted rust, slate, cream and olive cables. The tangle is almost resolved, with one cable leading purposefully off-frame. Honest mid-process infrastructure atmosphere. Modern documentary photograph, flat overhead light. 16:9 horizontal. No faces.",
-    },
-  ],
-  Sunday: [
-    {
-      title: "Sunday Prompt 1",
-      use: "Week 1",
-      prompt: "A detailed, realistic photograph of a narrow footpath cutting through open Yorkshire moorland in early morning. Low mist sits in the valley below and the grass beside the path is worn short. No person visible. Camera low at path level, looking toward the mist-filled valley. Solitary, unhurried atmosphere. Wide natural-light landscape photograph, cool blue-grey morning tones, heather, mist and pale gold palette. 16:9 horizontal.",
-    },
-    {
-      title: "Sunday Prompt 2",
-      use: "Week 2",
-      prompt: "A detailed, realistic photograph of a plain kitchen table set for one, a half-drunk cup of tea, a small plate with toast, and a folded newspaper not yet opened. Morning light through a net curtain. The chair is pushed back slightly. Domestic, unhurried atmosphere. Quiet documentary photograph, warm indirect morning light, cream, pale yellow and warm grey palette. 16:9 horizontal. No faces. No readable text.",
-    },
-    {
-      title: "Sunday Prompt 3",
-      use: "Week 3",
-      prompt: "A detailed, realistic photograph of a single white candle burning on a cold stone windowsill. Outside the window are a grey British sky, slate rooftops and bare tree branches. Candle flame reflects faintly in the glass. Still, grounded atmosphere. Natural-light interior photograph, amber flame, cold slate grey and deep warm shadow palette. 16:9 horizontal. No faces.",
-    },
-    {
-      title: "Sunday Prompt 4",
-      use: "Week 4",
-      prompt: "A detailed, realistic photograph of worn brown leather boots by a back door, dried mud on the soles, laces loosely tied. A dark waxed coat hangs above them. The back door is slightly ajar, showing grey daylight and wet garden stone. Honest, unglamorous atmosphere. Candid documentary photograph, cool overcast light, brown, grey, olive and muted rust palette. 16:9 horizontal. No faces.",
-    },
-    {
-      title: "Sunday Prompt 5",
-      use: "Week 5",
-      prompt: "A detailed, realistic photograph of a shallow river in the Yorkshire Dales in late afternoon. Low clear water, smooth stones visible, a single oak tree on the far bank with leaves beginning to turn amber. Slow, restorative atmosphere. Wide natural-light landscape photograph, warm-to-cool palette of amber, pale gold, river grey and deep green. 16:9 horizontal. No faces.",
-    },
-  ],
-};
+function todayDate() {
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
 
-const checklist = [
-  "Image uploaded at the top, 1200 × 630px, 16:9",
-  "Title finalised",
-  "Divider added below header",
-  "Opening hook checked",
-  "Subscribe Button 1 added after first strong section",
-  "Button 1 label: Get every issue in your inbox, it's free",
-  "Sign-off and bio line included",
-  "Divider added before final subscribe button",
-  "Subscribe Button 2 added at the end",
-  "Button 2 label: Join The Creative Desk",
-  "Next Tuesday teaser added",
-  "Next Thursday teaser added",
-  "Preview checked before publishing",
-];
+export default function CreativeDeskGeneratorPage() {
+  const [postType, setPostType] = useState<PostType>("Tuesday");
+  const [topic, setTopic] = useState("");
+  const [readerProblem, setReaderProblem] = useState("");
+  const [nextTuesday, setNextTuesday] = useState("");
+  const [nextThursday, setNextThursday] = useState("");
+  const [copied, setCopied] = useState("");
 
-export default function CreativeDeskPage() {
-  const [activeTab, setActiveTab] = useState<"Tuesday" | "Thursday" | "Sunday">("Tuesday");
-  const [copyMessage, setCopyMessage] = useState("");
+  const config = postConfig[postType];
 
-  async function copyPrompt(text: string, label: string) {
+  const generated = useMemo(() => {
+    const safeTopic = topic.trim() || "[Insert topic]";
+    const problem = readerProblem.trim() || "[Insert reader problem or tension]";
+    const teaserTuesday = nextTuesday.trim() || "[Insert next Tuesday topic]";
+    const teaserThursday = nextThursday.trim() || "[Insert next Thursday topic]";
+
+    return `# ${safeTopic}
+
+The Creative Desk · ${todayDate()}
+
+---
+
+[IMAGE AT TOP]
+
+Use this image prompt:
+
+${config.imagePrompt}
+
+---
+
+## Opening hook
+
+Start with one sharp sentence connected to ${safeTopic}. No preamble.
+
+## First strong section
+
+Write 2 to 3 paragraphs that establish the core idea.
+
+Reader tension:
+${problem}
+
+Angle:
+${config.postAngle}
+
+[SUBSCRIBE BUTTON 1]
+
+Label:
+Get every issue in your inbox, it's free
+
+## Main body
+
+Continue the essay using this structure:
+
+1. Name the real problem.
+2. Explain why people misunderstand it.
+3. Give the reader a practical way forward.
+4. Use one grounded example or story.
+5. End with a clear principle they can remember.
+
+## Sign-off
+
+Write one short italic sign-off line from The Creative Desk.
+
+Example:
+_The Creative Desk is a quiet space for clearer work, calmer thinking and better creative decisions._
+
+---
+
+[SUBSCRIBE BUTTON 2]
+
+Label:
+Join The Creative Desk
+
+## Next issue teasers
+
+Next Tuesday:
+${teaserTuesday}
+
+Next Thursday:
+${teaserThursday}
+
+---
+
+## LinkedIn teaser
+
+Hook:
+Write one sentence that names the tension behind ${safeTopic}.
+
+Conflict:
+Explain the problem without giving away the whole essay.
+
+Cliffhanger:
+Reveal only the first step or the core question.
+
+End with:
+${config.linkedinEnd}
+
+## Instagram carousel concept
+
+${config.instagramPrompt}
+
+## Substack Note
+
+Pull one punchy quote from the diagnostic section and post it as a short Note.
+
+## Visual brief
+
+Style:
+Black and white, high contrast, minimal, editorial.
+
+Subject:
+A visual metaphor for ${safeTopic}.
+
+Never:
+Colour-heavy imagery, busy stock photography, generic business imagery or decorative overlays.`;
+  }, [topic, readerProblem, nextTuesday, nextThursday, config]);
+
+  async function copyText(text: string, label: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setCopyMessage(`${label} copied.`);
+      setCopied(`${label} copied.`);
     } catch {
-      setCopyMessage("Could not copy prompt.");
+      setCopied("Could not copy.");
     }
   }
 
@@ -138,216 +201,167 @@ export default function CreativeDeskPage() {
       <div className="shell">
         <nav className="nav">
           <div className="logo">
-            <div className="logo-title">Creative Desk OS</div>
+            <div className="logo-title">Creative Desk Generator</div>
             <div className="logo-subtitle">
-              Publishing system, templates, image library and workflow
+              Build a correctly structured Substack post
             </div>
           </div>
 
-          <Link className="nav-pill" href="/">
+          <Link className="nav-pill" href="/creative-desk">
             <ArrowLeft size={16} />
-            Back to Alfred OS
+            Back to Creative Desk OS
           </Link>
         </nav>
 
         <section className="card">
-          <div className="kicker">Step 31 · The Creative Desk Publishing System</div>
-          <h1>Publish every Substack post with the same calm structure.</h1>
+          <div className="kicker">Step 31A · Creative Desk Post Generator</div>
+          <h1>Choose the post type, add the topic, then copy the full publishing brief.</h1>
           <p className="lead">
-            This page keeps the weekly rhythm, post structure, subscribe button placement,
-            image prompts and publishing checklist in one place.
+            Alfred applies the right rhythm, image prompt, subscribe button placement,
+            Substack structure and repurposing block for Sunday, Tuesday or Thursday.
           </p>
         </section>
 
-        <section className="card" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Create New Post</div>
-
-          <div className="mode-grid">
-            <Link className="btn" href="/creative-desk/generator">
-              Open Creative Desk Generator
-            </Link>
-
-            <div className="mode">
-              <strong>What it does</strong>
-              <span>Choose Sunday, Tuesday or Thursday and Alfred builds the correct Substack publishing brief.</span>
+        <section className="creative-generator-grid" style={{ marginTop: "28px" }}>
+          <article className="card">
+            <div className="creative-desk-heading">
+              <Wand2 size={22} />
+              <h2>Post setup</h2>
             </div>
-          </div>
-        </section>
 
-        <section className="creative-desk-grid" style={{ marginTop: "28px" }}>
-          <article className="creative-desk-card">
-            <Sparkles size={22} />
-            <span>Sunday</span>
-            <strong>Reset</strong>
-            <p>Reflective. Discipline. Perspective.</p>
+            <div className="creative-type-grid">
+              {(["Sunday", "Tuesday", "Thursday"] as const).map((type) => (
+                <button
+                  key={type}
+                  className={postType === type ? "creative-type-card active" : "creative-type-card"}
+                  onClick={() => setPostType(type)}
+                >
+                  <span>{postConfig[type].icon}</span>
+                  <strong>{postConfig[type].label}</strong>
+                  <small>{postConfig[type].mood}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="form-grid" style={{ marginTop: "22px" }}>
+              <input
+                className="input-box"
+                style={{ minHeight: "52px" }}
+                value={topic}
+                onChange={(event) => setTopic(event.target.value)}
+                placeholder="Post topic, e.g. Why your brand message feels unclear"
+              />
+
+              <textarea
+                className="input-box"
+                value={readerProblem}
+                onChange={(event) => setReaderProblem(event.target.value)}
+                placeholder="Reader problem or tension, e.g. They are creating content but not getting the right enquiries."
+              />
+
+              <input
+                className="input-box"
+                style={{ minHeight: "52px" }}
+                value={nextTuesday}
+                onChange={(event) => setNextTuesday(event.target.value)}
+                placeholder="Next Tuesday teaser"
+              />
+
+              <input
+                className="input-box"
+                style={{ minHeight: "52px" }}
+                value={nextThursday}
+                onChange={(event) => setNextThursday(event.target.value)}
+                placeholder="Next Thursday teaser"
+              />
+            </div>
           </article>
 
-          <article className="creative-desk-card">
-            <BookOpen size={22} />
-            <span>Tuesday</span>
-            <strong>Creative Guide</strong>
-            <p>Structure. Positioning. Long-term thinking.</p>
-          </article>
+          <article className="card">
+            <div className="creative-desk-heading">
+              <BookOpen size={22} />
+              <h2>Selected format</h2>
+            </div>
 
-          <article className="creative-desk-card">
-            <CalendarDays size={22} />
-            <span>Thursday</span>
-            <strong>Tech</strong>
-            <p>Tools. Workflow. What actually works.</p>
-          </article>
-        </section>
-
-        <section className="card" style={{ marginTop: "28px" }}>
-          <div className="creative-desk-heading">
-            <Clipboard size={22} />
-            <h2>Publishing SOP</h2>
-          </div>
-
-          <div className="creative-step-list">
-            {[
-              "Image at top",
-              "Essay title",
-              "Horizontal divider",
-              "Opening hook",
-              "First strong section",
-              "Subscribe Button 1",
-              "Remaining sections",
-              "Sign-off and bio",
-              "Horizontal divider",
-              "Subscribe Button 2",
-              "Next issue teasers",
-            ].map((step, index) => (
-              <div className="creative-step" key={step}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{step}</strong>
+            <div className="mode-grid">
+              <div className="mode">
+                <strong>{config.icon} {config.label}</strong>
+                <span>{config.mood}</span>
               </div>
-            ))}
-          </div>
-        </section>
 
-        <section className="card" style={{ marginTop: "28px" }}>
-          <div className="creative-desk-heading">
-            <MailPlus size={22} />
-            <h2>Subscribe Button Rules</h2>
-          </div>
+              <div className="mode">
+                <strong>Positioning</strong>
+                <span>{config.positioning}</span>
+              </div>
 
-          <div className="mode-grid">
-            <div className="mode">
-              <strong>Button 1</strong>
-              <span>Placement: after the first strong section.</span>
-              <span>Label: Get every issue in your inbox, it&apos;s free</span>
+              <div className="mode">
+                <strong>Writing angle</strong>
+                <span>{config.postAngle}</span>
+              </div>
             </div>
-
-            <div className="mode">
-              <strong>Button 2</strong>
-              <span>Placement: at the very end of the article.</span>
-              <span>Label: Join The Creative Desk</span>
-            </div>
-          </div>
+          </article>
         </section>
 
         <section className="card" style={{ marginTop: "28px" }}>
           <div className="creative-desk-heading">
             <ImageIcon size={22} />
-            <h2>Image Prompt Library</h2>
+            <h2>Image prompt</h2>
           </div>
 
-          <div className="creative-tabs">
-            {(["Tuesday", "Thursday", "Sunday"] as const).map((tab) => (
-              <button
-                className={activeTab === tab ? "creative-tab active" : "creative-tab"}
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="creative-output-box">
+            <p>{config.imagePrompt}</p>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() => copyText(config.imagePrompt, "Image prompt")}
+            >
+              Copy Image Prompt
+            </button>
+          </div>
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="creative-desk-heading">
+            <Clipboard size={22} />
+            <h2>Generated publishing brief</h2>
           </div>
 
-          {copyMessage && (
-            <div className="mode" style={{ marginTop: "18px" }}>
-              <strong>Copied:</strong>
-              <span>{copyMessage}</span>
+          {copied && (
+            <div className="mode" style={{ marginBottom: "18px" }}>
+              <strong>Status:</strong>
+              <span>{copied}</span>
             </div>
           )}
 
-          <div className="creative-prompt-grid" style={{ marginTop: "18px" }}>
-            {promptGroups[activeTab].map((item) => (
-              <article className="creative-prompt-card" key={item.title}>
-                <div>
-                  <p>{item.use}</p>
-                  <h3>{item.title}</h3>
-                </div>
+          <pre className="creative-generated-output">{generated}</pre>
 
-                <span>{item.prompt}</span>
-
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => copyPrompt(item.prompt, item.title)}
-                >
-                  Copy Prompt
-                </button>
-              </article>
-            ))}
+          <div className="actions" style={{ marginTop: "18px" }}>
+            <button className="btn" onClick={() => copyText(generated, "Publishing brief")}>
+              Copy Full Brief
+            </button>
           </div>
         </section>
 
         <section className="card" style={{ marginTop: "28px" }}>
           <div className="creative-desk-heading">
-            <RotateCcw size={22} />
-            <h2>Weekly Rotation Planner</h2>
+            <CalendarDays size={22} />
+            <h2>Publishing rules applied</h2>
           </div>
-
-          <div className="creative-rotation-grid">
-            {[1, 2, 3, 4, 5].map((week) => (
-              <div className="creative-rotation-card" key={week}>
-                <strong>Week {week}</strong>
-                <span>Tuesday: Prompt {week}</span>
-                <span>Thursday: Prompt {week}</span>
-                <span>Sunday: Prompt {week}</span>
-              </div>
-            ))}
-          </div>
-
-          <p className="creative-note">
-            After Week 5, restart the cycle. By then the content has moved on enough
-            that the visual language feels like a system, not a repeat.
-          </p>
-        </section>
-
-        <section className="card" style={{ marginTop: "28px" }}>
-          <div className="creative-desk-heading">
-            <CheckSquare size={22} />
-            <h2>Publishing Checklist</h2>
-          </div>
-
-          <div className="creative-checklist">
-            {checklist.map((item) => (
-              <label key={item}>
-                <input type="checkbox" />
-                <span>{item}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        <section className="card" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Creative Desk North Star</div>
 
           <div className="mode-grid">
             <div className="mode">
-              <strong>The Creative Desk builds trust.</strong>
-              <span>Every article should help readers think better, work better, build better or decide better.</span>
+              <strong>One image</strong>
+              <span>Top of post. 1200 × 630px. 16:9 horizontal.</span>
             </div>
 
             <div className="mode">
-              <strong>Mediahubink converts trust into revenue.</strong>
-              <span>The publication supports the business by building authority and useful relationships.</span>
+              <strong>Two subscribe buttons</strong>
+              <span>Button 1 after first strong section. Button 2 at the end.</span>
             </div>
 
             <div className="mode">
-              <strong>Coming Soon</strong>
-              <span>Creative Desk Post Generator: choose Sunday, Tuesday or Thursday and Alfred builds the correct Substack structure.</span>
+              <strong>One structure</strong>
+              <span>Same layout every essay so the reader learns the rhythm.</span>
             </div>
           </div>
         </section>
