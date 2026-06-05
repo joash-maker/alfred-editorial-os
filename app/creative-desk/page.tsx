@@ -159,6 +159,21 @@ export default function CreativeDeskPage() {
           </p>
         </section>
 
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Create New Post</div>
+
+          <div className="mode-grid">
+            <Link className="btn" href="/creative-desk/generator">
+              Open Creative Desk Generator
+            </Link>
+
+            <div className="mode">
+              <strong>What it does</strong>
+              <span>Choose Sunday, Tuesday or Thursday and Alfred builds the correct Substack publishing brief.</span>
+            </div>
+          </div>
+        </section>
+
         <section className="creative-desk-grid" style={{ marginTop: "28px" }}>
           <article className="creative-desk-card">
             <Sparkles size={22} />
