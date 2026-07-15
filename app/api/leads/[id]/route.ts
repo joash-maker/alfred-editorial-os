@@ -31,6 +31,7 @@ export async function PATCH(
         industry: body.industry || null,
         source: body.source || null,
         interest: body.interest || null,
+        solution: body.solution || "Not decided",
         stage: body.stage || "new",
         notes: body.notes || null,
         follow_up_date: body.follow_up_date || body.next_action_date || null,
@@ -46,11 +47,14 @@ export async function PATCH(
       .select()
       .single();
 
-    if (error) return Response.json({ error: error.message }, { status: 400 });
+    if (error) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
 
     return Response.json({ lead: data });
   } catch (error) {
     console.error(error);
+
     return Response.json(
       { error: "Something went wrong updating the lead." },
       { status: 500 }
@@ -71,11 +75,14 @@ export async function DELETE(
       .delete()
       .eq("id", id);
 
-    if (error) return Response.json({ error: error.message }, { status: 400 });
+    if (error) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
 
     return Response.json({ success: true });
   } catch (error) {
     console.error(error);
+
     return Response.json(
       { error: "Something went wrong deleting the lead." },
       { status: 500 }
