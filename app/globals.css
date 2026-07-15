@@ -1959,3 +1959,144 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+/* Divine Intelligence */
+
+.divine-hero {
+  background: radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 40%), #0b0b0b;
+}
+
+.divine-quote {
+  margin: 24px 0 0;
+  border-left: 3px solid #f5f5f5;
+  padding: 18px 20px;
+  color: #f5f5f5;
+  font-size: 22px;
+  line-height: 1.5;
+  background: #101010;
+  border-radius: 0 18px 18px 0;
+}
+
+.divine-quote span {
+  display: block;
+  margin-top: 10px;
+  color: #a3a3a3;
+  font-size: 14px;
+}
+
+.divine-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.divine-heading h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.05em;
+}
+
+.divine-scripture-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.divine-scripture-card,
+.divine-prayer,
+.divine-reflection {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 22px;
+  padding: 22px;
+}
+
+.divine-scripture-card span {
+  color: #a3a3a3;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.divine-scripture-card h3 {
+  margin: 8px 0;
+  font-size: 22px;
+}
+
+.divine-scripture-card p,
+.divine-prayer p,
+.divine-reflection p {
+  margin: 0 0 16px;
+  color: #d4d4d4;
+  line-height: 1.7;
+}
+
+.divine-prayer h3 {
+  margin: 20px 0 8px;
+  font-size: 18px;
+}
+
+.divine-prayer h3:first-child {
+  margin-top: 0;
+}
+
+.divine-reflection blockquote {
+  margin: 22px 0;
+  border-left: 3px solid #f5f5f5;
+  padding-left: 18px;
+  color: #f5f5f5;
+  font-size: 24px;
+  font-style: italic;
+}
+
+.divine-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.divine-check-grid label {
+  border: 1px solid #262626;
+  background: #0d0d0d;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #f5f5f5;
+}
+
+.divine-check-grid input {
+  width: 18px;
+  height: 18px;
+}
+
+.divine-note {
+  color: #a3a3a3;
+  margin-top: 14px;
+}
+
+.divine-closing {
+  text-align: center;
+  padding: 34px;
+}
+
+.divine-closing p {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.5;
+  color: #f5f5f5;
+}
+
+@media (max-width: 900px) {
+  .divine-scripture-grid,
+  .divine-check-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .divine-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
