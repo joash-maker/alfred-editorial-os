@@ -1,29 +1,82 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-export async function POST(req: Request) {
-  try {
-    const { prompt } = await req.json();
+const ANTHROPIC_MODEL =
+  process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
-    if (!prompt) {
-      return Response.json(
-        { error: "No prompt provided." },
-        { status: 400 }
-      );
-    }
+const OPENAI_MODEL =
+  process.env.OPENAI_MODEL || "gpt-5.6-sol";
 
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+const MAX_OUTPUT_TOKENS = 5000;
 
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 5000,
-      system: `
+const ALFRED_SYSTEM_PROMPT = `
 You are Alfred.
 
 Alfred is Joash Perera's private commercial chief of staff for Mediahubink.
 
 Your role is to help Mediahubink think, communicate and operate like a disciplined modern advisory business.
+
+
+MEDIAHUBINK MESSAGING GUIDE
+
+Use this as the canonical explanation of Mediahubink.
+
+Spoken one-line pitch:
+"So what do I do? I fix the bit of a business that falls apart between someone getting interested and someone actually getting served."
+
+Formal one-line pitch:
+Mediahubink redesigns how UK businesses capture, qualify and convert inbound enquiries, so they can grow without hiring for it.
+
+Core problem:
+Growing UK businesses often generate enough demand, but lose value after interest is created. Calls go unanswered, forms sit overnight, after-hours visitors leave, and enquiries arrive without enough context.
+
+Core diagnosis:
+The business is not short of demand. It is short of infrastructure to handle that demand properly.
+
+Core category:
+Enquiry infrastructure.
+
+Plain-English explanation:
+Most businesses are good at getting people interested. Where it falls apart is everything after that, when someone actually tries to get in touch. That is the part Mediahubink builds properly.
+
+Core system:
+Mediahubink redesigns how enquiries are:
+- captured
+- qualified
+- routed
+- converted
+
+Differentiation:
+Mediahubink is not a chatbot vendor and not an automation freelancer. It is a commercial systems consultancy that uses modern digital tools to build enquiry infrastructure.
+
+Primary commercial framing:
+- missed enquiries
+- slow response
+- overloaded admin
+- poor lead quality
+- scaling friction
+- weak front-of-house systems
+
+Simple illustration:
+A business may have a front door, but visitors are not always greeted, qualified or routed properly. Mediahubink fixes the front door without forcing the business to hire more staff.
+
+Approved offer language:
+- Fredi Capture: website enquiry qualification and lead capture, 24/7, £397/month, no setup
+- Fredi Capture+: everything in Fredi Capture, plus inbound voice response, WhatsApp integration and direct calendar booking, £697/month plus £299 setup
+- Emergency Build: fast-deployment enquiry cover for urgent situations, from £599 one-off
+- Fredi Enterprise: multi-site or complex deployment, custom scope
+
+Approved sector lines:
+- Trades: "I help trades businesses capture every enquiry, including the ones that arrive at 10pm when no one's in the office."
+- Professional services: "I help service businesses make sure the first impression a prospect gets matches the quality of the rest of the experience."
+- Scaling owner: "I help growing businesses handle more inbound without hiring more people to do it."
+- LinkedIn: "Most businesses have a demand problem and a capture problem. They fix the demand problem with marketing. They ignore the capture problem until it gets expensive."
+
+Messaging rules:
+- Lead with the business problem, not the technology.
+- Prefer enquiry infrastructure, inbound performance, lead qualification and response workflows.
+- Do not describe Mediahubink as a chatbot vendor, automation freelancer or AI novelty business.
+- Keep the technology in the background unless technical detail is explicitly requested.
+
 
 MEDIAHUBINK POSITIONING
 
@@ -456,28 +509,202 @@ If a generated output contains phrases such as AI-assisted, AI-enabled, AI-power
 FINAL RULE
 
 Mediahubink sells commercial system redesign, not AI novelty.
-      `,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
+      `;
 
-    const reply = message.content[0];
+type ProviderName = "anthropic" | "openai";
 
-    return Response.json({
-      reply:
-        reply.type === "text"
-          ? reply.text
-          : "Alfred could not generate a response.",
-    });
-  } catch (error) {
-    console.error(error);
+type ProviderErrorDetails = {
+  provider: ProviderName;
+  message: string;
+  status?: number;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown provider error.";
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof (error as { status?: unknown }).status === "number"
+  ) {
+    return (error as { status: number }).status;
+  }
+
+  return undefined;
+}
+
+async function generateWithAnthropic(prompt: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not configured.");
+  }
+
+  const client = new Anthropic({ apiKey });
+
+  const message = await client.messages.create({
+    model: ANTHROPIC_MODEL,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    system: ALFRED_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  const reply = message.content
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim();
+
+  if (!reply) {
+    throw new Error("Claude returned no text response.");
+  }
+
+  return reply;
+}
+
+async function generateWithOpenAI(prompt: string): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not configured.");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      instructions: ALFRED_SYSTEM_PROMPT,
+      input: prompt,
+      max_output_tokens: MAX_OUTPUT_TOKENS,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      data?.error?.message ||
+      `OpenAI request failed with status ${response.status}.`;
+
+    const error = new Error(message) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  if (typeof data.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
+  const reply = Array.isArray(data.output)
+    ? data.output
+        .flatMap((item: { content?: unknown }) =>
+          Array.isArray(item.content) ? item.content : []
+        )
+        .filter(
+          (item: unknown): item is { type: string; text: string } =>
+            typeof item === "object" &&
+            item !== null &&
+            "type" in item &&
+            "text" in item &&
+            (item as { type?: unknown }).type === "output_text" &&
+            typeof (item as { text?: unknown }).text === "string"
+        )
+        .map((item) => item.text)
+        .join("\n")
+        .trim()
+    : "";
+
+  if (!reply) {
+    throw new Error("OpenAI returned no text response.");
+  }
+
+  return reply;
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const prompt =
+      typeof body?.prompt === "string" ? body.prompt.trim() : "";
+
+    if (!prompt) {
+      return Response.json(
+        { error: "No prompt provided." },
+        { status: 400 }
+      );
+    }
+
+    const providerErrors: ProviderErrorDetails[] = [];
+
+    try {
+      const reply = await generateWithAnthropic(prompt);
+
+      return Response.json({
+        reply,
+        provider: "anthropic",
+        model: ANTHROPIC_MODEL,
+        fallbackUsed: false,
+      });
+    } catch (error) {
+      const details: ProviderErrorDetails = {
+        provider: "anthropic",
+        message: getErrorMessage(error),
+        status: getErrorStatus(error),
+      };
+
+      providerErrors.push(details);
+      console.error(
+        "Anthropic request failed. Trying OpenAI fallback.",
+        details
+      );
+    }
+
+    try {
+      const reply = await generateWithOpenAI(prompt);
+
+      return Response.json({
+        reply,
+        provider: "openai",
+        model: OPENAI_MODEL,
+        fallbackUsed: true,
+        primaryError: providerErrors[0]?.message,
+      });
+    } catch (error) {
+      const details: ProviderErrorDetails = {
+        provider: "openai",
+        message: getErrorMessage(error),
+        status: getErrorStatus(error),
+      };
+
+      providerErrors.push(details);
+      console.error("OpenAI fallback failed.", details);
+    }
 
     return Response.json(
-      { error: "Something went wrong." },
+      {
+        error:
+          "Alfred could not generate a response because both AI providers failed.",
+        providers: providerErrors,
+      },
+      { status: 503 }
+    );
+  } catch (error) {
+    console.error("Alfred route error.", error);
+
+    return Response.json(
+      { error: "Something went wrong processing the Alfred request." },
       { status: 500 }
     );
   }
