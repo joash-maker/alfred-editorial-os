@@ -1729,6 +1729,9 @@ ${paymentPrompt}
               <a className="btn btn-secondary" href="/daily-briefing">
                 Daily Briefing
               </a>
+              <a className="btn btn-secondary" href="/divine-intelligence">
+                Divine Intelligence
+              </a>
               <a className="btn btn-secondary" href="/creative-desk">
                 Creative Desk OS
               </a>
