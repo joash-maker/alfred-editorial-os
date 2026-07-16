@@ -96,7 +96,6 @@ type Lead = {
   industry: string | null;
   source: string | null;
   interest: string | null;
-  solution: string | null;
   stage: string | null;
   notes: string | null;
   follow_up_date: string | null;
@@ -763,7 +762,6 @@ export default function HomePage() {
   const [leadPhone, setLeadPhone] = useState("");
   const [leadIndustry, setLeadIndustry] = useState("");
   const [leadInterest, setLeadInterest] = useState("");
-  const [leadSolution, setLeadSolution] = useState("Not decided");
   const [leadStage, setLeadStage] = useState("new");
   const [leadNotes, setLeadNotes] = useState("");
   const [leadMonthlyValue, setLeadMonthlyValue] = useState("");
@@ -891,7 +889,6 @@ export default function HomePage() {
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
-Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1022,7 +1019,6 @@ ${reply}
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
-Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1159,7 +1155,6 @@ ${reply}
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
-Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1292,7 +1287,6 @@ ${reply}
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
-Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1529,7 +1523,6 @@ ${paymentPrompt}
     setLeadPhone(lead.phone || "");
     setLeadIndustry(lead.industry || "");
     setLeadInterest(lead.interest || "");
-    setLeadSolution(lead.solution || "Not decided");
     setLeadStage(lead.stage || "new");
     setLeadNotes(lead.notes || "");
     setLeadMonthlyValue(
@@ -1562,7 +1555,6 @@ ${paymentPrompt}
     setLeadPhone("");
     setLeadIndustry("");
     setLeadInterest("");
-    setLeadSolution("Not decided");
     setLeadStage("new");
     setLeadNotes("");
     setLeadMonthlyValue("");
@@ -1629,7 +1621,6 @@ ${paymentPrompt}
           industry: leadIndustry,
           source: leadSource,
           interest: leadInterest,
-          solution: leadSolution,
           stage: leadStage,
           notes: leadNotes,
           monthly_value: leadMonthlyValue ? Number(leadMonthlyValue) : null,
@@ -1657,7 +1648,6 @@ ${paymentPrompt}
       setLeadPhone("");
       setLeadIndustry("");
       setLeadInterest("");
-      setLeadSolution("Not decided");
       setLeadStage("new");
       setLeadNotes("");
       setLeadMonthlyValue("");
@@ -1738,6 +1728,9 @@ ${paymentPrompt}
               </a>
               <a className="btn btn-secondary" href="/solutions">
                 Mediahubink Solutions
+              </a>
+              <a className="btn btn-secondary" href="/opportunities">
+                Opportunity Hub
               </a>
               <a className="btn btn-secondary" href="/daily-briefing">
                 Daily Briefing
@@ -2148,18 +2141,6 @@ ${paymentPrompt}
 
             <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi Capture+, demo, audit" />
 
-            <select className="input-box" style={{ minHeight: "52px" }} value={leadSolution} onChange={(e) => setLeadSolution(e.target.value)}>
-              <option value="Not decided">Not decided</option>
-              <option value="Fredi Capture">Fredi Capture</option>
-              <option value="Fredi Capture+">Fredi Capture+</option>
-              <option value="Grid Gym">Grid Gym</option>
-              <option value="Kaya">Kaya</option>
-              <option value="RunSheet OS">RunSheet OS</option>
-              <option value="Opportunity Blueprint">Opportunity Blueprint</option>
-              <option value="Emergency Build">Emergency Build</option>
-              <option value="Fredi Enterprise">Fredi Enterprise</option>
-            </select>
-
             <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
               <option value="new">New</option>
               <option value="contacted">Contacted</option>
@@ -2271,7 +2252,6 @@ ${paymentPrompt}
                   <span>Phone: {lead.phone || "Not added"}</span>
                   <span>Industry: {lead.industry || "Not added"}</span>
                   <span>Interest: {lead.interest || "Not added"}</span>
-                  <span>Solution: {lead.solution || "Not decided"}</span>
                   <span>Monthly value: £{Number(lead.monthly_value ?? lead.estimated_value ?? 0).toLocaleString("en-GB")}</span>
                   <span>Source: {lead.source || "Not added"}</span>
                   <span>Region: {lead.region || "Not added"}</span>
