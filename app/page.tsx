@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {
   Mic,
@@ -725,6 +726,8 @@ Payment-ready`,
 };
 
 export default function HomePage() {
+  const router = useRouter();
+
   const [prompt, setPrompt] = useState("");
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1614,6 +1617,76 @@ ${paymentPrompt}
     }
   }
 
+  async function updateLeadStage(lead: Lead, stage: string) {
+    setLeadMessage("");
+
+    const previousStage = lead.stage || "new";
+
+    setLeads((current) =>
+      current.map((item) =>
+        item.id === lead.id ? { ...item, stage } : item
+      )
+    );
+
+    try {
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: lead.name,
+          company: lead.company,
+          email: lead.email,
+          phone: lead.phone,
+          industry: lead.industry,
+          source: lead.source,
+          interest: lead.interest,
+          solution: lead.solution || "Not decided",
+          stage,
+          notes: lead.notes,
+          follow_up_date: lead.follow_up_date,
+          estimated_value: lead.estimated_value,
+          monthly_value: lead.monthly_value,
+          score: lead.score,
+          lead_score: lead.lead_score,
+          next_action: lead.next_action,
+          next_action_date: lead.next_action_date,
+          region: lead.region,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLeads((current) =>
+          current.map((item) =>
+            item.id === lead.id ? { ...item, stage: previousStage } : item
+          )
+        );
+
+        setLeadMessage(data.error || "Could not update lead status.");
+        return;
+      }
+
+      setLeads((current) =>
+        current.map((item) =>
+          item.id === lead.id ? data.lead : item
+        )
+      );
+
+      setLeadMessage(
+        `${lead.company || lead.name || "Lead"} status updated.`
+      );
+    } catch {
+      setLeads((current) =>
+        current.map((item) =>
+          item.id === lead.id ? { ...item, stage: previousStage } : item
+        )
+      );
+
+      setLeadMessage("Something went wrong updating lead status.");
+    }
+  }
+
   async function convertLeadToOpportunity(lead: Lead) {
     const label = lead.company || lead.name || "this lead";
     setConvertingLeadId(lead.id);
@@ -1648,7 +1721,7 @@ ${paymentPrompt}
       }
 
       setLeadMessage(`${label} added to Opportunity Hub.`);
-      window.open("/opportunities", "_blank");
+      router.push("/opportunities");
     } catch {
       setLeadMessage("Something went wrong converting the lead.");
     } finally {
@@ -2337,9 +2410,9 @@ ${paymentPrompt}
                     <select
                       className="lead-status-select"
                       value={lead.stage || "new"}
-                      onChange={(e) => {
-                        editLead({ ...lead, stage: e.target.value });
-                      }}
+                      onChange={(e) =>
+                        updateLeadStage(lead, e.target.value)
+                      }
                     >
                       <option value="new">New</option>
                       <option value="discovery">Discovery</option>
