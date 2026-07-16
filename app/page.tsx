@@ -96,6 +96,7 @@ type Lead = {
   industry: string | null;
   source: string | null;
   interest: string | null;
+  solution: string | null;
   stage: string | null;
   notes: string | null;
   follow_up_date: string | null;
@@ -751,6 +752,7 @@ export default function HomePage() {
   const [leadMessage, setLeadMessage] = useState("");
   const [savingLead, setSavingLead] = useState(false);
   const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
+  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -762,6 +764,7 @@ export default function HomePage() {
   const [leadPhone, setLeadPhone] = useState("");
   const [leadIndustry, setLeadIndustry] = useState("");
   const [leadInterest, setLeadInterest] = useState("");
+  const [leadSolution, setLeadSolution] = useState("Not decided");
   const [leadStage, setLeadStage] = useState("new");
   const [leadNotes, setLeadNotes] = useState("");
   const [leadMonthlyValue, setLeadMonthlyValue] = useState("");
@@ -889,6 +892,7 @@ export default function HomePage() {
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
+Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1019,6 +1023,7 @@ ${reply}
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
+Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1155,6 +1160,7 @@ ${reply}
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
+Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1287,6 +1293,7 @@ ${reply}
                 `${l.company || l.name || "Unnamed lead"} |
 ${l.industry || "No industry"} |
 Interest: ${l.interest || "None"} |
+Solution: ${l.solution || "Not decided"} |
 Stage: ${l.stage || "new"} |
 Monthly Value: £${l.monthly_value ?? l.estimated_value ?? 0} |
 Lead Score: ${l.lead_score ?? l.score ?? 0} |
@@ -1523,6 +1530,7 @@ ${paymentPrompt}
     setLeadPhone(lead.phone || "");
     setLeadIndustry(lead.industry || "");
     setLeadInterest(lead.interest || "");
+    setLeadSolution(lead.solution || "Not decided");
     setLeadStage(lead.stage || "new");
     setLeadNotes(lead.notes || "");
     setLeadMonthlyValue(
@@ -1555,6 +1563,7 @@ ${paymentPrompt}
     setLeadPhone("");
     setLeadIndustry("");
     setLeadInterest("");
+    setLeadSolution("Not decided");
     setLeadStage("new");
     setLeadNotes("");
     setLeadMonthlyValue("");
@@ -1605,6 +1614,48 @@ ${paymentPrompt}
     }
   }
 
+  async function convertLeadToOpportunity(lead: Lead) {
+    const label = lead.company || lead.name || "this lead";
+    setConvertingLeadId(lead.id);
+    setLeadMessage("");
+
+    try {
+      const response = await fetch("/api/opportunities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          name: lead.name,
+          company: lead.company,
+          industry: lead.industry,
+          region: lead.region,
+          solution: lead.solution || "Not decided",
+          monthly_value: lead.monthly_value,
+          estimated_value: lead.estimated_value,
+          stage: lead.stage,
+          priority: lead.priority,
+          next_action: lead.next_action,
+          next_action_date: lead.next_action_date,
+          follow_up_date: lead.follow_up_date,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setLeadMessage(data.error || "Could not convert lead to opportunity.");
+        return;
+      }
+
+      setLeadMessage(`${label} added to Opportunity Hub.`);
+      window.open("/opportunities", "_blank");
+    } catch {
+      setLeadMessage("Something went wrong converting the lead.");
+    } finally {
+      setConvertingLeadId(null);
+    }
+  }
+
   async function saveLead() {
     setSavingLead(true);
     setLeadMessage("");
@@ -1621,6 +1672,7 @@ ${paymentPrompt}
           industry: leadIndustry,
           source: leadSource,
           interest: leadInterest,
+          solution: leadSolution,
           stage: leadStage,
           notes: leadNotes,
           monthly_value: leadMonthlyValue ? Number(leadMonthlyValue) : null,
@@ -1648,6 +1700,7 @@ ${paymentPrompt}
       setLeadPhone("");
       setLeadIndustry("");
       setLeadInterest("");
+      setLeadSolution("Not decided");
       setLeadStage("new");
       setLeadNotes("");
       setLeadMonthlyValue("");
@@ -2141,6 +2194,18 @@ ${paymentPrompt}
 
             <input className="input-box" style={{ minHeight: "52px" }} value={leadInterest} onChange={(e) => setLeadInterest(e.target.value)} placeholder="Interest, e.g. Fredi Capture+, demo, audit" />
 
+            <select className="input-box" style={{ minHeight: "52px" }} value={leadSolution} onChange={(e) => setLeadSolution(e.target.value)}>
+              <option value="Not decided">Not decided</option>
+              <option value="Fredi Capture">Fredi Capture</option>
+              <option value="Fredi Capture+">Fredi Capture+</option>
+              <option value="Grid Gym">Grid Gym</option>
+              <option value="Kaya">Kaya</option>
+              <option value="RunSheet OS">RunSheet OS</option>
+              <option value="Opportunity Blueprint">Opportunity Blueprint</option>
+              <option value="Emergency Build">Emergency Build</option>
+              <option value="Fredi Enterprise">Fredi Enterprise</option>
+            </select>
+
             <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
               <option value="new">New</option>
               <option value="contacted">Contacted</option>
@@ -2233,6 +2298,16 @@ ${paymentPrompt}
                     <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
 
                     <div className="lead-card-actions">
+                      <button
+                        className="lead-edit-btn"
+                        onClick={() => convertLeadToOpportunity(lead)}
+                        disabled={convertingLeadId === lead.id}
+                      >
+                        {convertingLeadId === lead.id
+                          ? "Converting..."
+                          : "Convert to Opportunity"}
+                      </button>
+
                       <button className="lead-edit-btn" onClick={() => editLead(lead)}>
                         Edit
                       </button>
@@ -2252,6 +2327,7 @@ ${paymentPrompt}
                   <span>Phone: {lead.phone || "Not added"}</span>
                   <span>Industry: {lead.industry || "Not added"}</span>
                   <span>Interest: {lead.interest || "Not added"}</span>
+                  <span>Solution: {lead.solution || "Not decided"}</span>
                   <span>Monthly value: £{Number(lead.monthly_value ?? lead.estimated_value ?? 0).toLocaleString("en-GB")}</span>
                   <span>Source: {lead.source || "Not added"}</span>
                   <span>Region: {lead.region || "Not added"}</span>
