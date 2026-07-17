@@ -6,8 +6,10 @@ import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
+  Clock3,
   Loader2,
   PoundSterling,
+  Sparkles,
   Target,
   TrendingUp,
   Users,
@@ -34,6 +36,18 @@ type Lead = {
   region: string | null;
 };
 
+type MissionMode = {
+  title: string;
+  greeting: string;
+  objective: string;
+};
+
+type CreativeFocus = {
+  title: string;
+  status: string;
+  href: string;
+};
+
 const targetMrr = 25500;
 
 function formatMoney(value: number) {
@@ -41,7 +55,7 @@ function formatMoney(value: number) {
 }
 
 function normaliseStage(stage: string | null) {
-  return stage || "new";
+  return (stage || "new").toLowerCase();
 }
 
 function getMonthlyValue(lead: Lead) {
@@ -79,10 +93,108 @@ function formatDate(dateValue: string | null) {
   });
 }
 
+function formatFullDate(date: Date) {
+  return date.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatTime(date: Date) {
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getCurrentMode(date: Date): MissionMode {
+  const hour = date.getHours();
+
+  if (hour < 9) {
+    return {
+      title: "Morning Startup",
+      greeting: "Good morning",
+      objective: "Prepare your mind, review the business and choose the right first move.",
+    };
+  }
+
+  if (hour < 12) {
+    return {
+      title: "Morning Focus",
+      greeting: "Good morning",
+      objective: "Protect your focus and move the strongest opportunity forward.",
+    };
+  }
+
+  if (hour < 17) {
+    return {
+      title: "Afternoon Briefing",
+      greeting: "Good afternoon",
+      objective: "Keep momentum, clear follow-ups and close important conversations.",
+    };
+  }
+
+  if (hour < 22) {
+    return {
+      title: "Evening Builder",
+      greeting: "Good evening",
+      objective: "Build the asset or system that creates the greatest future value.",
+    };
+  }
+
+  return {
+    title: "Close Down Review",
+    greeting: "Good evening",
+    objective: "Finish well, capture the lesson and prepare tomorrow.",
+  };
+}
+
+function getCreativeFocus(date: Date): CreativeFocus {
+  const day = date.getDay();
+
+  if (day === 2) {
+    return {
+      title: "Creative Guide",
+      status: "Tuesday publishing focus",
+      href: "/creative-desk",
+    };
+  }
+
+  if (day === 4) {
+    return {
+      title: "Tech Thursday",
+      status: "Thursday publishing focus",
+      href: "/creative-desk",
+    };
+  }
+
+  if (day === 0) {
+    return {
+      title: "Mindset Reset",
+      status: "Sunday publishing focus",
+      href: "/creative-desk",
+    };
+  }
+
+  return {
+    title: "No publication scheduled",
+    status: "Use today to research, outline or improve the next issue.",
+    href: "/creative-desk",
+  };
+}
+
+function getLeadName(lead: Lead | null) {
+  if (!lead) return "Unnamed lead";
+  return lead.company || lead.name || "Unnamed lead";
+}
+
 export default function DailyBriefingPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [now, setNow] = useState<Date | null>(null);
 
   async function loadLeads() {
     setLoading(true);
@@ -93,24 +205,36 @@ export default function DailyBriefingPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.error || "Could not load daily briefing.");
+        setMessage(data.error || "Could not load Mission Control.");
         return;
       }
 
       setLeads(data.leads || []);
-      setMessage("Daily briefing loaded from CRM.");
+      setMessage("Mission Control loaded from live CRM data.");
     } catch {
-      setMessage("Something went wrong loading daily briefing.");
+      setMessage("Something went wrong loading Mission Control.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    setNow(new Date());
     loadLeads();
+
+    const timer = window.setInterval(() => {
+      setNow(new Date());
+    }, 60000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
+  const currentDate = now ?? new Date();
+  const mode = getCurrentMode(currentDate);
+  const creativeFocus = getCreativeFocus(currentDate);
+
   const openLeads = useMemo(() => leads.filter(isOpenOpportunity), [leads]);
+
   const wonLeads = useMemo(
     () => leads.filter((lead) => normaliseStage(lead.stage) === "won"),
     [leads]
@@ -131,35 +255,144 @@ export default function DailyBriefingPage() {
   const dueActions = useMemo(
     () =>
       openLeads
-        .filter((lead) => isDueTodayOrOverdue(lead.next_action_date || lead.follow_up_date))
+        .filter((lead) =>
+          isDueTodayOrOverdue(lead.next_action_date || lead.follow_up_date)
+        )
         .sort((a, b) => {
-          const aDate = new Date(a.next_action_date || a.follow_up_date || "2999-12-31").getTime();
-          const bDate = new Date(b.next_action_date || b.follow_up_date || "2999-12-31").getTime();
+          const aDate = new Date(
+            a.next_action_date || a.follow_up_date || "2999-12-31"
+          ).getTime();
+
+          const bDate = new Date(
+            b.next_action_date || b.follow_up_date || "2999-12-31"
+          ).getTime();
+
           return aDate - bDate;
         }),
     [openLeads]
   );
 
-  const highestValueLead = useMemo(() => {
-    return [...openLeads].sort((a, b) => getMonthlyValue(b) - getMonthlyValue(a))[0] || null;
-  }, [openLeads]);
+  const highestValueLead = useMemo(
+    () =>
+      [...openLeads].sort(
+        (a, b) => getMonthlyValue(b) - getMonthlyValue(a)
+      )[0] || null,
+    [openLeads]
+  );
 
-  const highestScoreLead = useMemo(() => {
-    return [...openLeads].sort((a, b) => getLeadScore(b) - getLeadScore(a))[0] || null;
-  }, [openLeads]);
+  const highestScoreLead = useMemo(
+    () =>
+      [...openLeads].sort(
+        (a, b) => getLeadScore(b) - getLeadScore(a)
+      )[0] || null,
+    [openLeads]
+  );
 
   const oldestFollowUp = dueActions[0] || null;
 
+  const missingNextActions = useMemo(
+    () =>
+      openLeads.filter(
+        (lead) =>
+          !lead.next_action &&
+          !lead.next_action_date &&
+          !lead.follow_up_date
+      ),
+    [openLeads]
+  );
+
+  const pipelinePercentage =
+    targetMrr > 0 ? Math.round((potentialMrr / targetMrr) * 100) : 0;
+
+  const todaysMission = useMemo(() => {
+    if (dueActions.length > 0) {
+      return `Clear ${dueActions.length} due ${
+        dueActions.length === 1 ? "follow-up" : "follow-ups"
+      } before starting new work.`;
+    }
+
+    if (highestValueLead) {
+      return `Move ${getLeadName(
+        highestValueLead
+      )} one stage closer to becoming a client.`;
+    }
+
+    if (openLeads.length === 0) {
+      return "Create one genuine sales conversation with a qualified prospect.";
+    }
+
+    return "Give every active opportunity a clear next action and date.";
+  }, [dueActions.length, highestValueLead, openLeads.length]);
+
+  const intelligence = useMemo(() => {
+    const insights: string[] = [];
+
+    if (highestValueLead) {
+      insights.push(
+        `${getLeadName(
+          highestValueLead
+        )} is the highest-value open opportunity at ${formatMoney(
+          getMonthlyValue(highestValueLead)
+        )} per month.`
+      );
+    } else {
+      insights.push(
+        "No open opportunity has a monthly value yet. Add values so Alfred can rank commercial priorities."
+      );
+    }
+
+    if (dueActions.length > 0) {
+      insights.push(
+        `${dueActions.length} ${
+          dueActions.length === 1 ? "follow-up is" : "follow-ups are"
+        } due today or overdue.`
+      );
+    } else {
+      insights.push(
+        "No follow-ups are overdue. Use the space to create new conversations or strengthen an active opportunity."
+      );
+    }
+
+    if (missingNextActions.length > 0) {
+      insights.push(
+        `${missingNextActions.length} active ${
+          missingNextActions.length === 1 ? "lead has" : "leads have"
+        } no clear next action or date.`
+      );
+    } else {
+      insights.push(
+        `Your current pipeline represents approximately ${pipelinePercentage}% of the £25,500 MRR target.`
+      );
+    }
+
+    return insights;
+  }, [
+    highestValueLead,
+    dueActions.length,
+    missingNextActions.length,
+    pipelinePercentage,
+  ]);
+
   const recommendedActions = [
     highestValueLead
-      ? `Move the highest-value opportunity forward: ${highestValueLead.company || highestValueLead.name || "Unnamed lead"} (${formatMoney(getMonthlyValue(highestValueLead))}/month).`
+      ? `Move the highest-value opportunity forward: ${getLeadName(
+          highestValueLead
+        )} (${formatMoney(getMonthlyValue(highestValueLead))}/month).`
       : "Add monthly values to CRM so Alfred can identify the highest-value opportunity.",
+
     highestScoreLead
-      ? `Prioritise the strongest-fit lead: ${highestScoreLead.company || highestScoreLead.name || "Unnamed lead"} (${getLeadScore(highestScoreLead)}/40).`
+      ? `Prioritise the strongest-fit lead: ${getLeadName(
+          highestScoreLead
+        )} (${getLeadScore(highestScoreLead)}/40).`
       : "Add lead scores to CRM so Alfred can identify the strongest-fit lead.",
+
     oldestFollowUp
-      ? `Clear the oldest due follow-up: ${oldestFollowUp.company || oldestFollowUp.name || "Unnamed lead"} (${formatDate(oldestFollowUp.next_action_date || oldestFollowUp.follow_up_date)}).`
-      : "Add next action dates to CRM so Alfred can surface due follow-ups.",
+      ? `Clear the oldest due follow-up: ${getLeadName(
+          oldestFollowUp
+        )} (${formatDate(
+          oldestFollowUp.next_action_date || oldestFollowUp.follow_up_date
+        )}).`
+      : "Give the strongest active lead a dated next action.",
   ];
 
   const focusScore = Math.min(
@@ -180,9 +413,9 @@ export default function DailyBriefingPage() {
       <div className="shell">
         <nav className="nav">
           <div className="logo">
-            <div className="logo-title">Daily Briefing</div>
+            <div className="logo-title">Mission Control</div>
             <div className="logo-subtitle">
-              Alfred&apos;s morning command centre
+              Alfred&apos;s adaptive business command centre
             </div>
           </div>
 
@@ -193,22 +426,40 @@ export default function DailyBriefingPage() {
         </nav>
 
         <section className="card">
-          <div className="kicker">Step 30 · Daily Briefing Engine</div>
-          <h1>Good morning, Joash. Here is what needs attention today.</h1>
-          <p className="lead">
-            This page reads live CRM data and turns it into a simple daily focus:
-            revenue, relationships, pipeline and follow-up.
-          </p>
+          <div className="kicker">Step 43 · Adaptive Mission Control</div>
+
+          <h1>
+            {mode.greeting}, Joash. Here is what matters now.
+          </h1>
+
+          <p className="lead">{mode.objective}</p>
+
+          <div className="mode-grid" style={{ marginTop: "18px" }}>
+            <div className="mode">
+              <strong>{mode.title}</strong>
+              <span>{formatFullDate(currentDate)}</span>
+              <span>{formatTime(currentDate)}</span>
+            </div>
+
+            <div className="mode">
+              <strong>Today&apos;s Mission</strong>
+              <span>{todaysMission}</span>
+            </div>
+          </div>
 
           <div className="actions" style={{ marginTop: "18px" }}>
-            <button className="btn btn-secondary" onClick={loadLeads} disabled={loading}>
-              {loading ? "Loading..." : "Refresh Briefing"}
+            <button
+              className="btn btn-secondary"
+              onClick={loadLeads}
+              disabled={loading}
+            >
+              {loading ? "Loading..." : "Refresh Mission Control"}
             </button>
           </div>
 
           {message && (
             <div className="mode" style={{ marginTop: "18px" }}>
-              <strong>Status:</strong>
+              <strong>Status</strong>
               <span>{message}</span>
             </div>
           )}
@@ -216,63 +467,85 @@ export default function DailyBriefingPage() {
           {loading && (
             <div className="mode" style={{ marginTop: "18px" }}>
               <Loader2 size={18} />
-              <span>Loading CRM briefing...</span>
+              <span>Loading live business data...</span>
             </div>
           )}
         </section>
 
-        <section className="daily-briefing-grid" style={{ marginTop: "28px" }}>
-          <div className="daily-briefing-card">
-            <Target size={22} />
-            <span>Target MRR</span>
-            <strong>{formatMoney(targetMrr)}</strong>
-          </div>
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Revenue Snapshot</div>
 
-          <div className="daily-briefing-card">
-            <TrendingUp size={22} />
-            <span>Potential MRR</span>
-            <strong>{formatMoney(potentialMrr)}</strong>
-          </div>
+          <div className="daily-briefing-grid" style={{ marginTop: "18px" }}>
+            <div className="daily-briefing-card">
+              <Target size={22} />
+              <span>Target MRR</span>
+              <strong>{formatMoney(targetMrr)}</strong>
+            </div>
 
-          <div className="daily-briefing-card">
-            <PoundSterling size={22} />
-            <span>Won MRR</span>
-            <strong>{formatMoney(wonMrr)}</strong>
-          </div>
+            <div className="daily-briefing-card">
+              <TrendingUp size={22} />
+              <span>Pipeline MRR</span>
+              <strong>{formatMoney(potentialMrr)}</strong>
+            </div>
 
-          <div className="daily-briefing-card">
-            <Target size={22} />
-            <span>Revenue Gap</span>
-            <strong>{formatMoney(revenueGap)}</strong>
-          </div>
+            <div className="daily-briefing-card">
+              <PoundSterling size={22} />
+              <span>Won MRR</span>
+              <strong>{formatMoney(wonMrr)}</strong>
+            </div>
 
-          <div className="daily-briefing-card">
-            <Users size={22} />
-            <span>Active Opportunities</span>
-            <strong>{openLeads.length}</strong>
-          </div>
+            <div className="daily-briefing-card">
+              <Target size={22} />
+              <span>Revenue Gap</span>
+              <strong>{formatMoney(revenueGap)}</strong>
+            </div>
 
-          <div className="daily-briefing-card">
-            <CalendarClock size={22} />
-            <span>Follow-ups Due</span>
-            <strong>{dueActions.length}</strong>
+            <div className="daily-briefing-card">
+              <Users size={22} />
+              <span>Open Opportunities</span>
+              <strong>{openLeads.length}</strong>
+            </div>
+
+            <div className="daily-briefing-card">
+              <CalendarClock size={22} />
+              <span>Follow-ups Due</span>
+              <strong>{dueActions.length}</strong>
+            </div>
           </div>
         </section>
 
         <section className="card" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Today&apos;s Focus</div>
+          <div className="panel-title">Alfred Intelligence</div>
+
+          <div className="mode-grid">
+            {intelligence.map((insight, index) => (
+              <div className="mode" key={insight}>
+                <Sparkles size={18} />
+                <strong>Insight {index + 1}</strong>
+                <span>{insight}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Commercial Focus</div>
 
           <div className="mode-grid">
             <div className="mode">
               <strong>Highest value opportunity</strong>
               {highestValueLead ? (
                 <>
-                  <span>{highestValueLead.company || highestValueLead.name || "Unnamed lead"}</span>
-                  <span>{formatMoney(getMonthlyValue(highestValueLead))}/month</span>
-                  <span>Stage: {normaliseStage(highestValueLead.stage)}</span>
+                  <span>{getLeadName(highestValueLead)}</span>
+                  <span>
+                    {formatMoney(getMonthlyValue(highestValueLead))}/month
+                  </span>
+                  <span>
+                    Stage: {normaliseStage(highestValueLead.stage)}
+                  </span>
                 </>
               ) : (
-                <span>No value data yet. Add monthly value to CRM leads.</span>
+                <span>No value data yet. Add monthly values to CRM leads.</span>
               )}
             </div>
 
@@ -280,9 +553,11 @@ export default function DailyBriefingPage() {
               <strong>Highest score lead</strong>
               {highestScoreLead ? (
                 <>
-                  <span>{highestScoreLead.company || highestScoreLead.name || "Unnamed lead"}</span>
+                  <span>{getLeadName(highestScoreLead)}</span>
                   <span>Score: {getLeadScore(highestScoreLead)}/40</span>
-                  <span>Next: {highestScoreLead.next_action || "No next action"}</span>
+                  <span>
+                    Next: {highestScoreLead.next_action || "No next action"}
+                  </span>
                 </>
               ) : (
                 <span>No score data yet. Add lead scores to CRM leads.</span>
@@ -293,9 +568,15 @@ export default function DailyBriefingPage() {
               <strong>Oldest follow-up due</strong>
               {oldestFollowUp ? (
                 <>
-                  <span>{oldestFollowUp.company || oldestFollowUp.name || "Unnamed lead"}</span>
+                  <span>{getLeadName(oldestFollowUp)}</span>
                   <span>{oldestFollowUp.next_action || "Follow up"}</span>
-                  <span>Due: {formatDate(oldestFollowUp.next_action_date || oldestFollowUp.follow_up_date)}</span>
+                  <span>
+                    Due:{" "}
+                    {formatDate(
+                      oldestFollowUp.next_action_date ||
+                        oldestFollowUp.follow_up_date
+                    )}
+                  </span>
                 </>
               ) : (
                 <span>No overdue follow-ups. Keep every lead dated.</span>
@@ -323,16 +604,26 @@ export default function DailyBriefingPage() {
           {dueActions.length === 0 ? (
             <div className="mode">
               <strong>Nothing overdue.</strong>
-              <span>Nice. Now add tomorrow&apos;s next actions before you forget.</span>
+              <span>
+                Use the space to strengthen your best opportunity or create a
+                new sales conversation.
+              </span>
             </div>
           ) : (
             <div className="mode-grid">
               {dueActions.slice(0, 9).map((lead) => (
                 <div className="mode" key={lead.id}>
-                  <strong>{lead.company || lead.name || "Unnamed lead"}</strong>
+                  <strong>{getLeadName(lead)}</strong>
                   <span>{lead.next_action || "Follow up"}</span>
-                  <span>Due: {formatDate(lead.next_action_date || lead.follow_up_date)}</span>
-                  <span>Value: {formatMoney(getMonthlyValue(lead))}/month</span>
+                  <span>
+                    Due:{" "}
+                    {formatDate(
+                      lead.next_action_date || lead.follow_up_date
+                    )}
+                  </span>
+                  <span>
+                    Value: {formatMoney(getMonthlyValue(lead))}/month
+                  </span>
                 </div>
               ))}
             </div>
@@ -340,15 +631,88 @@ export default function DailyBriefingPage() {
         </section>
 
         <section className="card" style={{ marginTop: "28px" }}>
-          <div className="panel-title">Focus Score</div>
+          <div className="panel-title">Creative Desk</div>
+
+          <div className="mode-grid">
+            <div className="mode">
+              <strong>Today&apos;s publication</strong>
+              <span>{creativeFocus.title}</span>
+              <span>{creativeFocus.status}</span>
+            </div>
+
+            <div className="mode">
+              <strong>Publishing action</strong>
+              <span>
+                Open the Creative Desk to research, outline, write or prepare
+                the next issue.
+              </span>
+
+              <Link className="nav-pill" href={creativeFocus.href}>
+                Open Creative Desk
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Divine Intelligence</div>
+
+          <div className="mode-grid">
+            <div className="mode">
+              <strong>Pause before action</strong>
+              <span>
+                Seek wisdom, clarity and peace before making the next business
+                decision.
+              </span>
+            </div>
+
+            <div className="mode">
+              <strong>Today&apos;s reflection</strong>
+              <span>
+                What would faithful stewardship look like in the next hour?
+              </span>
+
+              <Link className="nav-pill" href="/divine-intelligence">
+                Open Divine Intelligence
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">CEO Question</div>
+
+          <div className="daily-focus-score">
+            <Clock3 size={28} />
+            <strong>One decision</strong>
+            <span>
+              If today ended in one hour, what single action would move
+              Mediahubink closest to £25,500 MRR?
+            </span>
+          </div>
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Mission Readiness</div>
 
           <div className="daily-focus-score">
             <CheckCircle2 size={28} />
             <strong>{focusScore}/10</strong>
             <span>
-              This score rises when Alfred has active opportunities, due follow-ups,
-              clear monthly values and lead scores. Better data means better advice.
+              Better data creates better decisions. Keep opportunity values,
+              lead scores and next actions current.
             </span>
+          </div>
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Mission Complete</div>
+
+          <div className="mode">
+            <strong>Revenue before content.</strong>
+            <span>Conversations before code.</span>
+            <span>Relationships before automation.</span>
+            <span>Build only what removes the next bottleneck.</span>
           </div>
         </section>
       </div>
