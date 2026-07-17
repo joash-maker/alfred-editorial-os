@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   Loader2,
   PoundSterling,
   Sparkles,
@@ -367,6 +368,38 @@ export default function DailyBriefingPage() {
               <span>Loading live business data...</span>
             </div>
           )}
+        </section>
+
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="panel-title">Mediahubink Tools</div>
+
+          <p className="lead" style={{ marginTop: "10px" }}>
+            Open your onboarding and bookkeeping systems directly from Mission
+            Control.
+          </p>
+
+          <div className="actions" style={{ marginTop: "18px" }}>
+            <a
+              className="btn btn-primary"
+              href="https://onboarding.mediahubink.com/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open Client Onboarding
+              <ExternalLink size={16} />
+            </a>
+
+            <a
+              className="btn btn-secondary"
+              href="https://books.mediahubink.com/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open Mediahubink Books
+              <ExternalLink size={16} />
+            </a>
+          </div>
         </section>
 
         <ExecutiveBriefCard ruleBriefing={executiveBriefing} />
