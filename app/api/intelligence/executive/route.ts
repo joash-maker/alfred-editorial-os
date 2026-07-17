@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
 import {
+  createExecutiveInputHash,
+  getCachedExecutiveBriefing,
+  saveExecutiveBriefing,
+} from "../../../../lib/intelligence/cache";
+
+import {
   generateClaudeExecutiveBriefing,
 } from "../../../../lib/intelligence/claude";
 
@@ -11,8 +17,12 @@ import type {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CACHE_KEY = "mission-control";
+const CACHE_TTL_MINUTES = 15;
+
 type ExecutiveRequestBody = {
   ruleBriefing?: ExecutiveBriefing;
+  forceRefresh?: boolean;
 };
 
 function isValidRuleBriefing(
@@ -38,11 +48,26 @@ function isValidRuleBriefing(
   );
 }
 
+function createHashInput(ruleBriefing: ExecutiveBriefing) {
+  return {
+    headline: ruleBriefing.headline,
+    summary: ruleBriefing.summary,
+    priority: ruleBriefing.priority,
+    reason: ruleBriefing.reason,
+    risk: ruleBriefing.risk,
+    opportunity: ruleBriefing.opportunity,
+    question: ruleBriefing.question,
+    principlesApplied: ruleBriefing.principlesApplied,
+    missionIntelligence: ruleBriefing.missionIntelligence,
+  };
+}
+
 export async function POST(request: Request) {
   let ruleBriefing: ExecutiveBriefing | null = null;
 
   try {
-    const body = (await request.json()) as ExecutiveRequestBody;
+    const body =
+      (await request.json()) as ExecutiveRequestBody;
 
     if (!isValidRuleBriefing(body.ruleBriefing)) {
       return NextResponse.json(
@@ -57,22 +82,55 @@ export async function POST(request: Request) {
 
     ruleBriefing = body.ruleBriefing;
 
+    const inputHash = createExecutiveInputHash(
+      createHashInput(ruleBriefing)
+    );
+
+    if (!body.forceRefresh) {
+      const cached = await getCachedExecutiveBriefing(
+        CACHE_KEY,
+        inputHash
+      );
+
+      if (cached) {
+        return NextResponse.json({
+          briefing: cached.briefing,
+          source: cached.source,
+          fallbackUsed: cached.source === "rules",
+          cacheHit: true,
+          cachedAt: cached.updatedAt,
+          expiresAt: cached.expiresAt,
+        });
+      }
+    }
+
     const claudeBriefing =
       await generateClaudeExecutiveBriefing({
         ruleBriefing,
       });
 
+    const enhancedBriefing: ExecutiveBriefing = {
+      ...ruleBriefing,
+      ...claudeBriefing,
+      principlesApplied:
+        ruleBriefing.principlesApplied,
+      missionIntelligence:
+        ruleBriefing.missionIntelligence,
+    };
+
+    await saveExecutiveBriefing({
+      cacheKey: CACHE_KEY,
+      briefing: enhancedBriefing,
+      inputHash,
+      source: "claude",
+      ttlMinutes: CACHE_TTL_MINUTES,
+    });
+
     return NextResponse.json({
-      briefing: {
-        ...ruleBriefing,
-        ...claudeBriefing,
-        principlesApplied:
-          ruleBriefing.principlesApplied,
-        missionIntelligence:
-          ruleBriefing.missionIntelligence,
-      },
+      briefing: enhancedBriefing,
       source: "claude",
       fallbackUsed: false,
+      cacheHit: false,
     });
   } catch (error) {
     console.error(
@@ -81,10 +139,30 @@ export async function POST(request: Request) {
     );
 
     if (ruleBriefing) {
+      const inputHash = createExecutiveInputHash(
+        createHashInput(ruleBriefing)
+      );
+
+      try {
+        await saveExecutiveBriefing({
+          cacheKey: CACHE_KEY,
+          briefing: ruleBriefing,
+          inputHash,
+          source: "rules",
+          ttlMinutes: 5,
+        });
+      } catch (cacheError) {
+        console.error(
+          "Failed to cache rule-based fallback:",
+          cacheError
+        );
+      }
+
       return NextResponse.json({
         briefing: ruleBriefing,
         source: "rules",
         fallbackUsed: true,
+        cacheHit: false,
       });
     }
 
