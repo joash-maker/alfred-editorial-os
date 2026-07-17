@@ -14,25 +14,18 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import {
+  generateMissionIntelligence,
+  type MissionLead,
+} from "@/lib/intelligence/engine";
 
-type Lead = {
-  id: string;
+type Lead = MissionLead & {
   created_at: string;
-  name: string | null;
-  company: string | null;
   industry: string | null;
   source: string | null;
   interest: string | null;
-  stage: string | null;
   notes: string | null;
-  follow_up_date: string | null;
-  estimated_value: number | null;
-  monthly_value: number | null;
-  score: number | null;
-  lead_score: number | null;
   priority: string | null;
-  next_action: string | null;
-  next_action_date: string | null;
   region: string | null;
 };
 
@@ -290,124 +283,14 @@ export default function DailyBriefingPage() {
 
   const oldestFollowUp = dueActions[0] || null;
 
-  const missingNextActions = useMemo(
+  const intelligence = useMemo(
     () =>
-      openLeads.filter(
-        (lead) =>
-          !lead.next_action &&
-          !lead.next_action_date &&
-          !lead.follow_up_date
-      ),
-    [openLeads]
+      generateMissionIntelligence({
+        leads,
+        targetMrr,
+      }),
+    [leads]
   );
-
-  const pipelinePercentage =
-    targetMrr > 0 ? Math.round((potentialMrr / targetMrr) * 100) : 0;
-
-  const todaysMission = useMemo(() => {
-    if (dueActions.length > 0) {
-      return `Clear ${dueActions.length} due ${
-        dueActions.length === 1 ? "follow-up" : "follow-ups"
-      } before starting new work.`;
-    }
-
-    if (highestValueLead) {
-      return `Move ${getLeadName(
-        highestValueLead
-      )} one stage closer to becoming a client.`;
-    }
-
-    if (openLeads.length === 0) {
-      return "Create one genuine sales conversation with a qualified prospect.";
-    }
-
-    return "Give every active opportunity a clear next action and date.";
-  }, [dueActions.length, highestValueLead, openLeads.length]);
-
-  const intelligence = useMemo(() => {
-    const insights: string[] = [];
-
-    if (highestValueLead) {
-      insights.push(
-        `${getLeadName(
-          highestValueLead
-        )} is the highest-value open opportunity at ${formatMoney(
-          getMonthlyValue(highestValueLead)
-        )} per month.`
-      );
-    } else {
-      insights.push(
-        "No open opportunity has a monthly value yet. Add values so Alfred can rank commercial priorities."
-      );
-    }
-
-    if (dueActions.length > 0) {
-      insights.push(
-        `${dueActions.length} ${
-          dueActions.length === 1 ? "follow-up is" : "follow-ups are"
-        } due today or overdue.`
-      );
-    } else {
-      insights.push(
-        "No follow-ups are overdue. Use the space to create new conversations or strengthen an active opportunity."
-      );
-    }
-
-    if (missingNextActions.length > 0) {
-      insights.push(
-        `${missingNextActions.length} active ${
-          missingNextActions.length === 1 ? "lead has" : "leads have"
-        } no clear next action or date.`
-      );
-    } else {
-      insights.push(
-        `Your current pipeline represents approximately ${pipelinePercentage}% of the £25,500 MRR target.`
-      );
-    }
-
-    return insights;
-  }, [
-    highestValueLead,
-    dueActions.length,
-    missingNextActions.length,
-    pipelinePercentage,
-  ]);
-
-  const recommendedActions = [
-    highestValueLead
-      ? `Move the highest-value opportunity forward: ${getLeadName(
-          highestValueLead
-        )} (${formatMoney(getMonthlyValue(highestValueLead))}/month).`
-      : "Add monthly values to CRM so Alfred can identify the highest-value opportunity.",
-
-    highestScoreLead
-      ? `Prioritise the strongest-fit lead: ${getLeadName(
-          highestScoreLead
-        )} (${getLeadScore(highestScoreLead)}/40).`
-      : "Add lead scores to CRM so Alfred can identify the strongest-fit lead.",
-
-    oldestFollowUp
-      ? `Clear the oldest due follow-up: ${getLeadName(
-          oldestFollowUp
-        )} (${formatDate(
-          oldestFollowUp.next_action_date || oldestFollowUp.follow_up_date
-        )}).`
-      : "Give the strongest active lead a dated next action.",
-  ];
-
-const focusScore = Math.min(
-  10,
-  Math.max(
-    1,
-    Math.round(
-      (openLeads.length > 0 ? 3 : 0) +
-        (potentialMrr > 0 ? 2 : 0) +
-        (highestScoreLead ? 2 : 0) +
-        (missingNextActions.length === 0 ? 2 : 0) +
-        (dueActions.length === 0 ? 1 : 0)
-    )
-  )
-);
 
   return (
     <main className="page">
@@ -427,7 +310,7 @@ const focusScore = Math.min(
         </nav>
 
         <section className="card">
-          <div className="kicker">Step 43 · Adaptive Mission Control</div>
+          <div className="kicker">Step 44 · Alfred Intelligence Engine</div>
 
           <h1>
             {mode.greeting}, Joash. Here is what matters now.
@@ -444,7 +327,7 @@ const focusScore = Math.min(
 
             <div className="mode">
               <strong>Today&apos;s Mission</strong>
-              <span>{todaysMission}</span>
+              <span>{intelligence.mission}</span>
             </div>
           </div>
 
@@ -519,7 +402,7 @@ const focusScore = Math.min(
           <div className="panel-title">Alfred Intelligence</div>
 
           <div className="mode-grid">
-            {intelligence.map((insight, index) => (
+            {intelligence.insights.map((insight, index) => (
               <div className="mode" key={insight}>
                 <Sparkles size={18} />
                 <strong>Insight {index + 1}</strong>
@@ -555,7 +438,7 @@ const focusScore = Math.min(
               {highestScoreLead ? (
                 <>
                   <span>{getLeadName(highestScoreLead)}</span>
-                  <span>Score: {getLeadScore(highestScoreLead)}/40</span>
+                  <span>Score: {getLeadScore(highestScoreLead)}</span>
                   <span>
                     Next: {highestScoreLead.next_action || "No next action"}
                   </span>
@@ -590,7 +473,7 @@ const focusScore = Math.min(
           <div className="panel-title">Recommended Actions</div>
 
           <div className="mode-grid">
-            {recommendedActions.map((action, index) => (
+            {intelligence.recommendedActions.map((action, index) => (
               <div className="mode" key={action}>
                 <strong>Action {index + 1}</strong>
                 <span>{action}</span>
@@ -686,10 +569,7 @@ const focusScore = Math.min(
           <div className="daily-focus-score">
             <Clock3 size={28} />
             <strong>One decision</strong>
-            <span>
-              If today ended in one hour, what single action would move
-              Mediahubink closest to £25,500 MRR?
-            </span>
+            <span>{intelligence.ceoQuestion}</span>
           </div>
         </section>
 
@@ -698,7 +578,7 @@ const focusScore = Math.min(
 
           <div className="daily-focus-score">
             <CheckCircle2 size={28} />
-            <strong>{focusScore}/10</strong>
+            <strong>{intelligence.readinessScore}/10</strong>
             <span>
               Better data creates better decisions. Keep opportunity values,
               lead scores and next actions current.
