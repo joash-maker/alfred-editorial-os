@@ -78,10 +78,6 @@ export function generateMissionIntelligence({
   targetMrr,
 }: MissionInput): MissionIntelligence {
   const openLeads = leads.filter(isOpenOpportunity);
-  const wonLeads = leads.filter(
-    (lead) => normaliseStage(lead.stage) === "won"
-  );
-
   const potentialMrr = openLeads.reduce(
     (total, lead) => total + getMonthlyValue(lead),
     0
@@ -219,8 +215,9 @@ export function generateMissionIntelligence({
     mission,
     insights,
     recommendedActions,
-    ceoQuestion:
-      "If today ended in one hour, what single action would move Mediahubink closest to £25,500 MRR?",
+    ceoQuestion: `If today ended in one hour, what single action would move Mediahubink closest to ${formatMoney(
+      targetMrr
+    )} MRR?`,
     readinessScore,
   };
 }
