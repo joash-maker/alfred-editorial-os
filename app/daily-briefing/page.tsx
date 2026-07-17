@@ -395,18 +395,19 @@ export default function DailyBriefingPage() {
       : "Give the strongest active lead a dated next action.",
   ];
 
-  const focusScore = Math.min(
-    10,
-    Math.max(
-      1,
-      Math.round(
-        (openLeads.length > 0 ? 3 : 0) +
-          (dueActions.length > 0 ? 2 : 0) +
-          (potentialMrr > 0 ? 2 : 0) +
-          (highestScoreLead ? getLeadScore(highestScoreLead) / 15 : 0)
-      )
+const focusScore = Math.min(
+  10,
+  Math.max(
+    1,
+    Math.round(
+      (openLeads.length > 0 ? 3 : 0) +
+        (potentialMrr > 0 ? 2 : 0) +
+        (highestScoreLead ? 2 : 0) +
+        (missingNextActions.length === 0 ? 2 : 0) +
+        (dueActions.length === 0 ? 1 : 0)
     )
-  );
+  )
+);
 
   return (
     <main className="page">
