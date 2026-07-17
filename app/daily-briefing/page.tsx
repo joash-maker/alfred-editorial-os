@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import ExecutiveBriefCard from "./ExecutiveBriefCard";
 import {
   ArrowLeft,
   CalendarClock,
@@ -368,47 +369,7 @@ export default function DailyBriefingPage() {
           )}
         </section>
 
-        <section className="card" style={{ marginTop: "28px" }}>
-          <div className="kicker">Alfred Executive Brief</div>
-
-          <div className="mode-grid" style={{ marginTop: "18px" }}>
-            <div className="mode" style={{ gridColumn: "1 / -1" }}>
-              <div
-                className="actions"
-                style={{ justifyContent: "space-between" }}
-              >
-                <strong>{executiveBriefing.headline}</strong>
-                <span className="nav-pill">{executiveBriefing.source}</span>
-              </div>
-              <span>{executiveBriefing.summary}</span>
-            </div>
-
-            <div className="mode">
-              <Target size={18} />
-              <strong>Priority</strong>
-              <span>{executiveBriefing.priority}</span>
-              <span>{executiveBriefing.reason}</span>
-            </div>
-
-            <div className="mode">
-              <Clock3 size={18} />
-              <strong>Risk</strong>
-              <span>{executiveBriefing.risk}</span>
-            </div>
-
-            <div className="mode">
-              <TrendingUp size={18} />
-              <strong>Opportunity</strong>
-              <span>{executiveBriefing.opportunity}</span>
-            </div>
-
-            <div className="mode">
-              <Sparkles size={18} />
-              <strong>CEO Question</strong>
-              <span>{executiveBriefing.question}</span>
-            </div>
-          </div>
-        </section>
+        <ExecutiveBriefCard ruleBriefing={executiveBriefing} />
 
         <section className="card" style={{ marginTop: "28px" }}>
           <div className="panel-title">Revenue Snapshot</div>
