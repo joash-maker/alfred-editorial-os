@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Clock3, Sparkles, Target, TrendingUp } from "lucide-react";
 
 import type { ExecutiveBriefing } from "../../lib/intelligence/executive";
 
@@ -32,26 +33,18 @@ function getStatusLabel({
   if (isLoading) return "Thinking";
   if (cacheHit) return "Cached";
   if (source === "claude") return "Claude";
-
   return "Rules";
 }
 
 export default function ExecutiveBriefCard({
   ruleBriefing,
 }: ExecutiveBriefCardProps) {
-  const [briefing, setBriefing] =
-    useState<ExecutiveBriefing>(ruleBriefing);
-
-  const [source, setSource] =
-    useState<IntelligenceSource>("rules");
-
+  const [briefing, setBriefing] = useState<ExecutiveBriefing>(ruleBriefing);
+  const [source, setSource] = useState<IntelligenceSource>("rules");
   const [cacheHit, setCacheHit] = useState(false);
   const [fallbackUsed, setFallbackUsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(
-    null
-  );
-
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const initialRequestStarted = useRef(false);
 
   const loadExecutiveBriefing = useCallback(
@@ -60,28 +53,18 @@ export default function ExecutiveBriefCard({
       setErrorMessage(null);
 
       try {
-        const response = await fetch(
-          "/api/intelligence/executive",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-            body: JSON.stringify({
-              ruleBriefing,
-              forceRefresh,
-            }),
-          }
-        );
+        const response = await fetch("/api/intelligence/executive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({ ruleBriefing, forceRefresh }),
+        });
 
-        const data =
-          (await response.json()) as ExecutiveApiResponse;
+        const data = (await response.json()) as ExecutiveApiResponse;
 
         if (!response.ok || !data.briefing) {
           throw new Error(
-            data.error ||
-              "Alfred could not generate the executive briefing."
+            data.error || "Alfred could not generate the executive briefing.",
           );
         }
 
@@ -90,128 +73,96 @@ export default function ExecutiveBriefCard({
         setCacheHit(Boolean(data.cacheHit));
         setFallbackUsed(Boolean(data.fallbackUsed));
       } catch (error) {
-        console.error(
-          "Failed to load Alfred Executive Brief:",
-          error
-        );
-
+        console.error("Failed to load Alfred Executive Brief:", error);
         setBriefing(ruleBriefing);
         setSource("rules");
         setCacheHit(false);
         setFallbackUsed(true);
-
         setErrorMessage(
-          "Claude is temporarily unavailable. Alfred is using the rules engine."
+          "Claude is temporarily unavailable. Alfred is using the rules engine.",
         );
       } finally {
         setIsLoading(false);
       }
     },
-    [ruleBriefing]
+    [ruleBriefing],
   );
 
   useEffect(() => {
     if (initialRequestStarted.current) return;
-
     initialRequestStarted.current = true;
     void loadExecutiveBriefing(false);
   }, [loadExecutiveBriefing]);
 
-  const statusLabel = getStatusLabel({
-    isLoading,
-    source,
-    cacheHit,
-  });
+  const statusLabel = getStatusLabel({ isLoading, source, cacheHit });
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+    <section className="card" style={{ marginTop: "28px" }}>
+      <div
+        className="actions"
+        style={{ justifyContent: "space-between", alignItems: "flex-start" }}
+      >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">
-            Alfred Executive Brief
-          </p>
-
-          <h2 className="mt-3 max-w-4xl text-2xl font-semibold leading-tight text-white md:text-3xl">
-            {briefing.headline}
-          </h2>
+          <div className="kicker">Alfred Executive Brief</div>
+          <h2 style={{ marginTop: "12px" }}>{briefing.headline}</h2>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-white/50">
-            {statusLabel}
-          </span>
-
+        <div className="actions">
+          <span className="nav-pill">{statusLabel}</span>
           <button
             type="button"
+            className="btn btn-secondary"
             onClick={() => void loadExecutiveBriefing(true)}
             disabled={isLoading}
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoading ? "Analysing…" : "Refresh"}
+            {isLoading ? "Analysing..." : "Refresh"}
           </button>
         </div>
       </div>
 
-      <p className="max-w-4xl text-sm leading-7 text-white/65 md:text-base">
+      <p className="lead" style={{ marginTop: "14px" }}>
         {briefing.summary}
       </p>
 
       {fallbackUsed && (
-        <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-100/70">
-          Claude was unavailable, so Alfred is using the
-          rule-based briefing.
+        <div className="mode" style={{ marginTop: "18px" }}>
+          <strong>Rules fallback active</strong>
+          <span>
+            Claude was unavailable, so Alfred is using the rule-based briefing.
+          </span>
         </div>
       )}
 
       {errorMessage && (
-        <p className="mt-3 text-xs text-white/40">
-          {errorMessage}
-        </p>
+        <div className="mode" style={{ marginTop: "12px" }}>
+          <span>{errorMessage}</span>
+        </div>
       )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-            Priority
-          </p>
-
-          <p className="mt-3 text-lg font-semibold leading-7 text-white">
-            {briefing.priority}
-          </p>
-
-          <p className="mt-3 text-sm leading-6 text-white/55">
-            {briefing.reason}
-          </p>
+      <div className="mode-grid" style={{ marginTop: "18px" }}>
+        <div className="mode">
+          <Target size={18} />
+          <strong>Priority</strong>
+          <span>{briefing.priority}</span>
+          <span>{briefing.reason}</span>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-            Risk
-          </p>
-
-          <p className="mt-3 text-sm leading-7 text-white/70">
-            {briefing.risk}
-          </p>
+        <div className="mode">
+          <Clock3 size={18} />
+          <strong>Risk</strong>
+          <span>{briefing.risk}</span>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-            Opportunity
-          </p>
-
-          <p className="mt-3 text-sm leading-7 text-white/70">
-            {briefing.opportunity}
-          </p>
+        <div className="mode">
+          <TrendingUp size={18} />
+          <strong>Opportunity</strong>
+          <span>{briefing.opportunity}</span>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-            CEO Question
-          </p>
-
-          <p className="mt-3 text-sm font-medium leading-7 text-white">
-            {briefing.question}
-          </p>
+        <div className="mode">
+          <Sparkles size={18} />
+          <strong>CEO Question</strong>
+          <span>{briefing.question}</span>
         </div>
       </div>
     </section>
