@@ -18,6 +18,7 @@ import {
   generateMissionIntelligence,
   type MissionLead,
 } from "../../lib/intelligence/engine";
+import { generateExecutiveBriefing } from "../../lib/intelligence/executive";
 
 type Lead = MissionLead & {
   created_at: string;
@@ -109,7 +110,8 @@ function getCurrentMode(date: Date): MissionMode {
     return {
       title: "Morning Startup",
       greeting: "Good morning",
-      objective: "Prepare your mind, review the business and choose the right first move.",
+      objective:
+        "Prepare your mind, review the business and choose the right first move.",
     };
   }
 
@@ -117,7 +119,8 @@ function getCurrentMode(date: Date): MissionMode {
     return {
       title: "Morning Focus",
       greeting: "Good morning",
-      objective: "Protect your focus and move the strongest opportunity forward.",
+      objective:
+        "Protect your focus and move the strongest opportunity forward.",
     };
   }
 
@@ -125,7 +128,8 @@ function getCurrentMode(date: Date): MissionMode {
     return {
       title: "Afternoon Briefing",
       greeting: "Good afternoon",
-      objective: "Keep momentum, clear follow-ups and close important conversations.",
+      objective:
+        "Keep momentum, clear follow-ups and close important conversations.",
     };
   }
 
@@ -133,7 +137,8 @@ function getCurrentMode(date: Date): MissionMode {
     return {
       title: "Evening Builder",
       greeting: "Good evening",
-      objective: "Build the asset or system that creates the greatest future value.",
+      objective:
+        "Build the asset or system that creates the greatest future value.",
     };
   }
 
@@ -230,17 +235,17 @@ export default function DailyBriefingPage() {
 
   const wonLeads = useMemo(
     () => leads.filter((lead) => normaliseStage(lead.stage) === "won"),
-    [leads]
+    [leads],
   );
 
   const potentialMrr = useMemo(
     () => openLeads.reduce((total, lead) => total + getMonthlyValue(lead), 0),
-    [openLeads]
+    [openLeads],
   );
 
   const wonMrr = useMemo(
     () => wonLeads.reduce((total, lead) => total + getMonthlyValue(lead), 0),
-    [wonLeads]
+    [wonLeads],
   );
 
   const revenueGap = Math.max(targetMrr - wonMrr, 0);
@@ -249,36 +254,35 @@ export default function DailyBriefingPage() {
     () =>
       openLeads
         .filter((lead) =>
-          isDueTodayOrOverdue(lead.next_action_date || lead.follow_up_date)
+          isDueTodayOrOverdue(lead.next_action_date || lead.follow_up_date),
         )
         .sort((a, b) => {
           const aDate = new Date(
-            a.next_action_date || a.follow_up_date || "2999-12-31"
+            a.next_action_date || a.follow_up_date || "2999-12-31",
           ).getTime();
 
           const bDate = new Date(
-            b.next_action_date || b.follow_up_date || "2999-12-31"
+            b.next_action_date || b.follow_up_date || "2999-12-31",
           ).getTime();
 
           return aDate - bDate;
         }),
-    [openLeads]
+    [openLeads],
   );
 
   const highestValueLead = useMemo(
     () =>
       [...openLeads].sort(
-        (a, b) => getMonthlyValue(b) - getMonthlyValue(a)
+        (a, b) => getMonthlyValue(b) - getMonthlyValue(a),
       )[0] || null,
-    [openLeads]
+    [openLeads],
   );
 
   const highestScoreLead = useMemo(
     () =>
-      [...openLeads].sort(
-        (a, b) => getLeadScore(b) - getLeadScore(a)
-      )[0] || null,
-    [openLeads]
+      [...openLeads].sort((a, b) => getLeadScore(b) - getLeadScore(a))[0] ||
+      null,
+    [openLeads],
   );
 
   const oldestFollowUp = dueActions[0] || null;
@@ -289,7 +293,17 @@ export default function DailyBriefingPage() {
         leads,
         targetMrr,
       }),
-    [leads]
+    [leads],
+  );
+
+  const executiveBriefing = useMemo(
+    () =>
+      generateExecutiveBriefing({
+        leads,
+        targetMrr,
+        currentDate,
+      }),
+    [leads, currentDate],
   );
 
   return (
@@ -310,11 +324,9 @@ export default function DailyBriefingPage() {
         </nav>
 
         <section className="card">
-          <div className="kicker">Step 44 · Alfred Intelligence Engine</div>
+          <div className="kicker">Step 45 · Alfred Executive Intelligence</div>
 
-          <h1>
-            {mode.greeting}, Joash. Here is what matters now.
-          </h1>
+          <h1>{mode.greeting}, Joash. Here is what matters now.</h1>
 
           <p className="lead">{mode.objective}</p>
 
@@ -354,6 +366,48 @@ export default function DailyBriefingPage() {
               <span>Loading live business data...</span>
             </div>
           )}
+        </section>
+
+        <section className="card" style={{ marginTop: "28px" }}>
+          <div className="kicker">Alfred Executive Brief</div>
+
+          <div className="mode-grid" style={{ marginTop: "18px" }}>
+            <div className="mode" style={{ gridColumn: "1 / -1" }}>
+              <div
+                className="actions"
+                style={{ justifyContent: "space-between" }}
+              >
+                <strong>{executiveBriefing.headline}</strong>
+                <span className="nav-pill">{executiveBriefing.source}</span>
+              </div>
+              <span>{executiveBriefing.summary}</span>
+            </div>
+
+            <div className="mode">
+              <Target size={18} />
+              <strong>Priority</strong>
+              <span>{executiveBriefing.priority}</span>
+              <span>{executiveBriefing.reason}</span>
+            </div>
+
+            <div className="mode">
+              <Clock3 size={18} />
+              <strong>Risk</strong>
+              <span>{executiveBriefing.risk}</span>
+            </div>
+
+            <div className="mode">
+              <TrendingUp size={18} />
+              <strong>Opportunity</strong>
+              <span>{executiveBriefing.opportunity}</span>
+            </div>
+
+            <div className="mode">
+              <Sparkles size={18} />
+              <strong>CEO Question</strong>
+              <span>{executiveBriefing.question}</span>
+            </div>
+          </div>
         </section>
 
         <section className="card" style={{ marginTop: "28px" }}>
@@ -424,9 +478,7 @@ export default function DailyBriefingPage() {
                   <span>
                     {formatMoney(getMonthlyValue(highestValueLead))}/month
                   </span>
-                  <span>
-                    Stage: {normaliseStage(highestValueLead.stage)}
-                  </span>
+                  <span>Stage: {normaliseStage(highestValueLead.stage)}</span>
                 </>
               ) : (
                 <span>No value data yet. Add monthly values to CRM leads.</span>
@@ -458,7 +510,7 @@ export default function DailyBriefingPage() {
                     Due:{" "}
                     {formatDate(
                       oldestFollowUp.next_action_date ||
-                        oldestFollowUp.follow_up_date
+                        oldestFollowUp.follow_up_date,
                     )}
                   </span>
                 </>
@@ -501,13 +553,9 @@ export default function DailyBriefingPage() {
                   <span>{lead.next_action || "Follow up"}</span>
                   <span>
                     Due:{" "}
-                    {formatDate(
-                      lead.next_action_date || lead.follow_up_date
-                    )}
+                    {formatDate(lead.next_action_date || lead.follow_up_date)}
                   </span>
-                  <span>
-                    Value: {formatMoney(getMonthlyValue(lead))}/month
-                  </span>
+                  <span>Value: {formatMoney(getMonthlyValue(lead))}/month</span>
                 </div>
               ))}
             </div>
