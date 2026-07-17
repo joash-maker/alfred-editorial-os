@@ -1,179 +1,140 @@
-import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
 
-import {
-  createExecutiveInputHash,
-  getCachedExecutiveBriefing,
-  saveExecutiveBriefing,
-} from "../../../../lib/intelligence/cache";
+import type { ExecutiveBriefing } from "./executive";
 
-import {
-  generateClaudeExecutiveBriefing,
-} from "../../../../lib/intelligence/claude";
-
-import type {
-  ExecutiveBriefing,
-} from "../../../../lib/intelligence/executive";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-const CACHE_KEY = "mission-control";
-const CACHE_TTL_MINUTES = 15;
-
-type ExecutiveRequestBody = {
-  ruleBriefing?: ExecutiveBriefing;
-  forceRefresh?: boolean;
+export type CachedExecutiveBriefing = {
+  briefing: ExecutiveBriefing;
+  source: "claude" | "rules";
+  inputHash: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-function isValidRuleBriefing(
-  value: unknown
-): value is ExecutiveBriefing {
-  if (!value || typeof value !== "object") {
-    return false;
+type SaveExecutiveBriefingInput = {
+  cacheKey: string;
+  briefing: ExecutiveBriefing;
+  inputHash: string;
+  source: "claude" | "rules";
+  ttlMinutes?: number;
+};
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured.");
   }
 
-  const briefing = value as Partial<ExecutiveBriefing>;
+  if (!supabaseSecretKey) {
+    throw new Error("SUPABASE_SECRET_KEY is not configured.");
+  }
 
-  return (
-    typeof briefing.headline === "string" &&
-    typeof briefing.summary === "string" &&
-    typeof briefing.priority === "string" &&
-    typeof briefing.reason === "string" &&
-    typeof briefing.risk === "string" &&
-    typeof briefing.opportunity === "string" &&
-    typeof briefing.question === "string" &&
-    Array.isArray(briefing.principlesApplied) &&
-    typeof briefing.missionIntelligence === "object" &&
-    briefing.missionIntelligence !== null
-  );
+  return createClient(supabaseUrl, supabaseSecretKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
 
-function createHashInput(ruleBriefing: ExecutiveBriefing) {
-  return {
-    headline: ruleBriefing.headline,
-    summary: ruleBriefing.summary,
-    priority: ruleBriefing.priority,
-    reason: ruleBriefing.reason,
-    risk: ruleBriefing.risk,
-    opportunity: ruleBriefing.opportunity,
-    question: ruleBriefing.question,
-    principlesApplied: ruleBriefing.principlesApplied,
-    missionIntelligence: ruleBriefing.missionIntelligence,
-  };
+export function createExecutiveInputHash(
+  value: unknown
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify(value))
+    .digest("hex");
 }
 
-export async function POST(request: Request) {
-  let ruleBriefing: ExecutiveBriefing | null = null;
+export async function getCachedExecutiveBriefing(
+  cacheKey: string,
+  inputHash: string
+): Promise<CachedExecutiveBriefing | null> {
+  const supabase = getSupabaseAdmin();
 
-  try {
-    const body =
-      (await request.json()) as ExecutiveRequestBody;
+  const { data, error } = await supabase
+    .from("executive_intelligence_cache")
+    .select(
+      `
+        briefing,
+        source,
+        input_hash,
+        expires_at,
+        created_at,
+        updated_at
+      `
+    )
+    .eq("cache_key", cacheKey)
+    .maybeSingle();
 
-    if (!isValidRuleBriefing(body.ruleBriefing)) {
-      return NextResponse.json(
-        {
-          error: "A valid rule-based briefing is required.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    ruleBriefing = body.ruleBriefing;
-
-    const inputHash = createExecutiveInputHash(
-      createHashInput(ruleBriefing)
-    );
-
-    if (!body.forceRefresh) {
-      const cached = await getCachedExecutiveBriefing(
-        CACHE_KEY,
-        inputHash
-      );
-
-      if (cached) {
-        return NextResponse.json({
-          briefing: cached.briefing,
-          source: cached.source,
-          fallbackUsed: cached.source === "rules",
-          cacheHit: true,
-          cachedAt: cached.updatedAt,
-          expiresAt: cached.expiresAt,
-        });
-      }
-    }
-
-    const claudeBriefing =
-      await generateClaudeExecutiveBriefing({
-        ruleBriefing,
-      });
-
-    const enhancedBriefing: ExecutiveBriefing = {
-      ...ruleBriefing,
-      ...claudeBriefing,
-      principlesApplied:
-        ruleBriefing.principlesApplied,
-      missionIntelligence:
-        ruleBriefing.missionIntelligence,
-    };
-
-    await saveExecutiveBriefing({
-      cacheKey: CACHE_KEY,
-      briefing: enhancedBriefing,
-      inputHash,
-      source: "claude",
-      ttlMinutes: CACHE_TTL_MINUTES,
-    });
-
-    return NextResponse.json({
-      briefing: enhancedBriefing,
-      source: "claude",
-      fallbackUsed: false,
-      cacheHit: false,
-    });
-  } catch (error) {
+  if (error) {
     console.error(
-      "Claude executive intelligence failed:",
+      "Failed to read executive intelligence cache:",
       error
     );
 
-    if (ruleBriefing) {
-      const inputHash = createExecutiveInputHash(
-        createHashInput(ruleBriefing)
-      );
+    return null;
+  }
 
-      try {
-        await saveExecutiveBriefing({
-          cacheKey: CACHE_KEY,
-          briefing: ruleBriefing,
-          inputHash,
-          source: "rules",
-          ttlMinutes: 5,
-        });
-      } catch (cacheError) {
-        console.error(
-          "Failed to cache rule-based fallback:",
-          cacheError
-        );
-      }
+  if (!data) {
+    return null;
+  }
 
-      return NextResponse.json({
-        briefing: ruleBriefing,
-        source: "rules",
-        fallbackUsed: true,
-        cacheHit: false,
-      });
-    }
+  const isExpired =
+    new Date(data.expires_at).getTime() <= Date.now();
 
-    return NextResponse.json(
+  const inputHasChanged = data.input_hash !== inputHash;
+
+  if (isExpired || inputHasChanged) {
+    return null;
+  }
+
+  return {
+    briefing: data.briefing as ExecutiveBriefing,
+    source: data.source as "claude" | "rules",
+    inputHash: data.input_hash,
+    expiresAt: data.expires_at,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+export async function saveExecutiveBriefing({
+  cacheKey,
+  briefing,
+  inputHash,
+  source,
+  ttlMinutes = 15,
+}: SaveExecutiveBriefingInput): Promise<void> {
+  const supabase = getSupabaseAdmin();
+
+  const now = new Date();
+  const expiresAt = new Date(
+    now.getTime() + ttlMinutes * 60 * 1000
+  );
+
+  const { error } = await supabase
+    .from("executive_intelligence_cache")
+    .upsert(
       {
-        error:
-          "Executive intelligence could not be generated.",
+        cache_key: cacheKey,
+        briefing,
+        input_hash: inputHash,
+        source,
+        expires_at: expiresAt.toISOString(),
+        updated_at: now.toISOString(),
       },
       {
-        status: 500,
+        onConflict: "cache_key",
       }
+    );
+
+  if (error) {
+    throw new Error(
+      `Failed to save executive intelligence cache: ${error.message}`
     );
   }
 }
