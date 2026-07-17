@@ -81,17 +81,15 @@ export async function POST(request: Request) {
     }
 
     ruleBriefing = body.ruleBriefing;
-ruleBriefing = body.ruleBriefing;
 
-console.log("Executive briefing received:", {
-  mission: ruleBriefing.missionIntelligence.mission,
-  readiness: ruleBriefing.missionIntelligence.readinessScore,
-  insights: ruleBriefing.missionIntelligence.insights,
-  recommendedActions:
-    ruleBriefing.missionIntelligence.recommendedActions,
-});
+    console.log("Executive briefing received:", {
+      mission: ruleBriefing.missionIntelligence.mission,
+      readiness: ruleBriefing.missionIntelligence.readinessScore,
+      insights: ruleBriefing.missionIntelligence.insights,
+      recommendedActions:
+        ruleBriefing.missionIntelligence.recommendedActions,
+    });
 
-const inputHash = createExecutiveInputHash(
     const inputHash = createExecutiveInputHash(
       createHashInput(ruleBriefing)
     );
