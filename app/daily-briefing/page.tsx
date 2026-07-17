@@ -17,7 +17,7 @@ import {
 import {
   generateMissionIntelligence,
   type MissionLead,
-} from "@/lib/intelligence/engine";
+} from "../../lib/intelligence/engine";
 
 type Lead = MissionLead & {
   created_at: string;
