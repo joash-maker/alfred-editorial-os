@@ -47,13 +47,11 @@ function getLeadScore(lead: MissionLead) {
 
 function getLeadName(lead: MissionLead | null) {
   if (!lead) return "Unnamed lead";
-
   return lead.company || lead.name || "Unnamed lead";
 }
 
 function isOpenOpportunity(lead: MissionLead) {
   const stage = normaliseStage(lead.stage);
-
   return stage !== "won" && stage !== "lost";
 }
 
@@ -80,7 +78,6 @@ function getTimeContext(date: Date) {
   if (hour < 12) return "this morning";
   if (hour < 17) return "this afternoon";
   if (hour < 22) return "this evening";
-
   return "before finishing today";
 }
 
@@ -99,30 +96,25 @@ export function generateExecutiveBriefing({
   const dueActions = openLeads.filter((lead) =>
     isDueTodayOrOverdue(
       lead.next_action_date || lead.follow_up_date,
-      currentDate
-    )
+      currentDate,
+    ),
   );
 
   const missingNextActions = openLeads.filter(
     (lead) =>
-      !lead.next_action &&
-      !lead.next_action_date &&
-      !lead.follow_up_date
+      !lead.next_action && !lead.next_action_date && !lead.follow_up_date,
   );
 
   const highestValueLead =
-    [...openLeads].sort(
-      (a, b) => getMonthlyValue(b) - getMonthlyValue(a)
-    )[0] || null;
+    [...openLeads].sort((a, b) => getMonthlyValue(b) - getMonthlyValue(a))[0] ||
+    null;
 
   const highestScoreLead =
-    [...openLeads].sort(
-      (a, b) => getLeadScore(b) - getLeadScore(a)
-    )[0] || null;
+    [...openLeads].sort((a, b) => getLeadScore(b) - getLeadScore(a))[0] || null;
 
   const pipelineMrr = openLeads.reduce(
     (total, lead) => total + getMonthlyValue(lead),
-    0
+    0,
   );
 
   const pipelinePercentage =
@@ -136,8 +128,7 @@ export function generateExecutiveBriefing({
   let summary =
     "Alfred has reviewed the current CRM data and identified the most important next move.";
 
-  let priority =
-    "Give every active opportunity a clear next action and date.";
+  let priority = "Give every active opportunity a clear next action and date.";
 
   let reason =
     "Clear next actions reduce uncertainty and make the pipeline easier to manage.";
@@ -154,17 +145,15 @@ export function generateExecutiveBriefing({
     summary = `There are ${dueActions.length} due ${
       dueActions.length === 1 ? "follow-up" : "follow-ups"
     }, while ${getLeadName(
-      highestValueLead
+      highestValueLead,
     )} remains the strongest immediate revenue opportunity.`;
 
     priority = `Contact ${getLeadName(
-      highestValueLead
+      highestValueLead,
     )} ${timeContext}, then clear the oldest overdue follow-ups.`;
 
-    reason = `${getLeadName(
-      highestValueLead
-    )} represents ${formatMoney(
-      getMonthlyValue(highestValueLead)
+    reason = `${getLeadName(highestValueLead)} represents ${formatMoney(
+      getMonthlyValue(highestValueLead),
     )} in potential monthly recurring revenue.`;
 
     risk = `${dueActions.length} overdue ${
@@ -194,13 +183,13 @@ export function generateExecutiveBriefing({
     headline = "The pipeline is under control. Now move the best opportunity.";
 
     summary = `${getLeadName(
-      highestValueLead
+      highestValueLead,
     )} is the highest-value active opportunity at ${formatMoney(
-      getMonthlyValue(highestValueLead)
+      getMonthlyValue(highestValueLead),
     )} per month.`;
 
     priority = `Move ${getLeadName(
-      highestValueLead
+      highestValueLead,
     )} one clear stage forward ${timeContext}.`;
 
     reason =
@@ -210,13 +199,12 @@ export function generateExecutiveBriefing({
       "A healthy-looking pipeline can still stall when the best opportunity has no decisive next step.";
 
     opportunity = `The current pipeline represents approximately ${pipelinePercentage}% of the ${formatMoney(
-      targetMrr
+      targetMrr,
     )} MRR target.`;
   } else if (openLeads.length === 0) {
     headline = "The immediate challenge is creating qualified conversations.";
 
-    summary =
-      "There are currently no active opportunities in the CRM.";
+    summary = "There are currently no active opportunities in the CRM.";
 
     priority = `Start one genuine conversation with a qualified prospect ${timeContext}.`;
 
@@ -232,9 +220,7 @@ export function generateExecutiveBriefing({
 
   if (missingNextActions.length > 0) {
     risk = `${missingNextActions.length} active ${
-      missingNextActions.length === 1
-        ? "lead has"
-        : "leads have"
+      missingNextActions.length === 1 ? "lead has" : "leads have"
     } no next action or follow-up date. This weakens pipeline control.`;
   }
 
@@ -244,9 +230,9 @@ export function generateExecutiveBriefing({
     highestScoreLead.id !== highestValueLead.id
   ) {
     opportunity = `${getLeadName(
-      highestScoreLead
+      highestScoreLead,
     )} has the strongest lead score, while ${getLeadName(
-      highestValueLead
+      highestValueLead,
     )} has the highest monthly value. Decide whether fit or immediate revenue should lead today's effort.`;
   }
 
