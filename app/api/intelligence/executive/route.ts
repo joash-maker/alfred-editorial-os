@@ -82,14 +82,6 @@ export async function POST(request: Request) {
 
     ruleBriefing = body.ruleBriefing;
 
-    console.log("Executive briefing received:", {
-      mission: ruleBriefing.missionIntelligence.mission,
-      readiness: ruleBriefing.missionIntelligence.readinessScore,
-      insights: ruleBriefing.missionIntelligence.insights,
-      recommendedActions:
-        ruleBriefing.missionIntelligence.recommendedActions,
-    });
-
     const inputHash = createExecutiveInputHash(
       createHashInput(ruleBriefing)
     );
