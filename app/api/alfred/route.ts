@@ -4,7 +4,7 @@ const ANTHROPIC_MODEL =
   process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
 const OPENAI_MODEL =
-  process.env.OPENAI_MODEL || "gpt-5.6-sol";
+  process.env.OPENAI_MODEL || "gpt-5.6-terra";
 
 const MAX_OUTPUT_TOKENS = 5000;
 
@@ -591,11 +591,42 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
     }),
   });
 
-  const data = await response.json();
+  const rawResponse = await response.text();
+
+  let data: {
+    error?: {
+      message?: string;
+    };
+    output_text?: string;
+    output?: Array<{
+      content?: Array<{
+        type?: string;
+        text?: string;
+      }>;
+    }>;
+  } = {};
+
+  if (rawResponse.trim()) {
+    try {
+      data = JSON.parse(rawResponse);
+    } catch {
+      console.error("OpenAI returned a non-JSON response.", {
+        status: response.status,
+        body: rawResponse.slice(0, 1000),
+      });
+
+      const error = new Error(
+        `OpenAI returned an unreadable response with status ${response.status}.`
+      ) as Error & { status?: number };
+
+      error.status = response.status;
+      throw error;
+    }
+  }
 
   if (!response.ok) {
     const message =
-      data?.error?.message ||
+      data.error?.message ||
       `OpenAI request failed with status ${response.status}.`;
 
     const error = new Error(message) as Error & { status?: number };
@@ -603,23 +634,22 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
     throw error;
   }
 
-  if (typeof data.output_text === "string" && data.output_text.trim()) {
+  if (
+    typeof data.output_text === "string" &&
+    data.output_text.trim()
+  ) {
     return data.output_text.trim();
   }
 
   const reply = Array.isArray(data.output)
     ? data.output
-        .flatMap((item: { content?: unknown }) =>
+        .flatMap((item) =>
           Array.isArray(item.content) ? item.content : []
         )
         .filter(
-          (item: unknown): item is { type: string; text: string } =>
-            typeof item === "object" &&
-            item !== null &&
-            "type" in item &&
-            "text" in item &&
-            (item as { type?: unknown }).type === "output_text" &&
-            typeof (item as { text?: unknown }).text === "string"
+          (item): item is { type: string; text: string } =>
+            item?.type === "output_text" &&
+            typeof item.text === "string"
         )
         .map((item) => item.text)
         .join("\n")
@@ -627,6 +657,11 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
     : "";
 
   if (!reply) {
+    console.error("OpenAI returned no usable text.", {
+      status: response.status,
+      body: rawResponse.slice(0, 1000),
+    });
+
     throw new Error("OpenAI returned no text response.");
   }
 
