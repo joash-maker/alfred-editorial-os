@@ -27,12 +27,10 @@ type SpeechRecognitionEvent = {
   };
 };
 
-declare global {
-  interface Window {
-    webkitSpeechRecognition?: new () => SpeechRecognitionType;
-    SpeechRecognition?: new () => SpeechRecognitionType;
-  }
-}
+type SpeechWindow = Window & {
+  webkitSpeechRecognition?: new () => SpeechRecognitionType;
+  SpeechRecognition?: new () => SpeechRecognitionType;
+};
 
 type Lead = {
   id: string;
@@ -263,7 +261,9 @@ export default function AlfredCommandCentrePage() {
 
   async function fetchJson(url: string) {
     try {
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await fetch(url, {
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         return null;
@@ -330,12 +330,16 @@ export default function AlfredCommandCentrePage() {
 
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(cleanForSpeech(text));
+    const utterance = new SpeechSynthesisUtterance(
+      cleanForSpeech(text)
+    );
+
     utterance.lang = "en-GB";
     utterance.rate = 0.96;
     utterance.pitch = 1;
 
     const voices = window.speechSynthesis.getVoices();
+
     const britishVoice = voices.find(
       (voice) =>
         voice.lang.toLowerCase() === "en-gb" ||
@@ -346,9 +350,17 @@ export default function AlfredCommandCentrePage() {
       utterance.voice = britishVoice;
     }
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+    };
 
     window.speechSynthesis.speak(utterance);
   }
@@ -407,14 +419,20 @@ Industry: ${lead.industry || "Not added"} |
 Region: ${lead.region || "Not added"} |
 Stage: ${lead.stage || "new"} |
 Solution: ${lead.solution || "Not decided"} |
-Monthly value: £${lead.monthly_value ?? lead.estimated_value ?? 0} |
+Monthly value: £${
+                  lead.monthly_value ??
+                  lead.estimated_value ??
+                  0
+                } |
 Score: ${lead.lead_score ?? lead.score ?? 0} |
 Priority: ${lead.priority || "not set"} |
 Source: ${lead.source || "not set"} |
 Last contacted: ${lead.last_contacted || "not recorded"} |
 Next action: ${lead.next_action || "none"} |
 Next action date: ${
-                  lead.next_action_date || lead.follow_up_date || "none"
+                  lead.next_action_date ||
+                  lead.follow_up_date ||
+                  "none"
                 } |
 Notes: ${lead.notes || "none"}`
             )
@@ -483,7 +501,9 @@ Description: ${offer.description || "none"}`
             .slice(0, 20)
             .map(
               (thought) =>
-                `${thought.title || "Untitled"}: ${thought.content}`
+                `${thought.title || "Untitled"}: ${
+                  thought.content
+                }`
             )
             .join("\n")
         : "No recent Alfred memory currently loaded.";
@@ -494,9 +514,11 @@ Description: ${offer.description || "none"}`
             .slice(-8)
             .map(
               (message) =>
-                `${message.role === "user" ? "Joash" : "Alfred"}: ${
-                  message.content
-                }`
+                `${
+                  message.role === "user"
+                    ? "Joash"
+                    : "Alfred"
+                }: ${message.content}`
             )
             .join("\n\n")
         : "No earlier conversation in this session.";
@@ -609,7 +631,11 @@ OPERATING RULES
       content: actualPrompt,
     };
 
-    setMessages((current) => [...current, userMessage]);
+    setMessages((current) => [
+      ...current,
+      userMessage,
+    ]);
+
     setPrompt("");
     setLoading(true);
 
@@ -650,7 +676,10 @@ Use it to make a decision, recommendation, briefing or answer.
         content: answer,
       };
 
-      setMessages((current) => [...current, assistantMessage]);
+      setMessages((current) => [
+        ...current,
+        assistantMessage,
+      ]);
 
       if (autoSpeak && data.reply) {
         speak(answer);
@@ -673,8 +702,11 @@ Use it to make a decision, recommendation, briefing or answer.
   }
 
   function startSpeech() {
+    const speechWindow = window as SpeechWindow;
+
     const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+      speechWindow.SpeechRecognition ||
+      speechWindow.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       setMessages((current) => [
@@ -693,15 +725,23 @@ Use it to make a decision, recommendation, briefing or answer.
     stopSpeaking();
 
     const speech = new SpeechRecognition();
+
     speech.continuous = false;
     speech.interimResults = false;
     speech.lang = "en-GB";
 
-    speech.onresult = (event: SpeechRecognitionEvent) => {
+    speech.onresult = (
+      event: SpeechRecognitionEvent
+    ) => {
       let transcript = "";
 
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+      for (
+        let i = 0;
+        i < event.results.length;
+        i++
+      ) {
+        transcript +=
+          event.results[i][0].transcript;
       }
 
       const cleanedTranscript = transcript.trim();
@@ -722,6 +762,7 @@ Use it to make a decision, recommendation, briefing or answer.
 
     setRecognition(speech);
     setIsListening(true);
+
     speech.start();
   }
 
@@ -749,25 +790,34 @@ Use it to make a decision, recommendation, briefing or answer.
   }
 
   const primaryCampaign =
-    defaultCampaigns.find((campaign) => campaign.primary) ||
-    defaultCampaigns[0];
+    defaultCampaigns.find(
+      (campaign) => campaign.primary
+    ) || defaultCampaigns[0];
 
-  const namibiaCampaign = defaultCampaigns.find(
-    (campaign) => campaign.market === "Namibia"
-  );
+  const namibiaCampaign =
+    defaultCampaigns.find(
+      (campaign) =>
+        campaign.market === "Namibia"
+    );
 
   return (
     <main className="page">
       <div className="shell">
         <nav className="nav">
           <div className="logo">
-            <div className="logo-title">Alfred</div>
+            <div className="logo-title">
+              Alfred
+            </div>
+
             <div className="logo-subtitle">
-              Mediahubink Sales, Strategy & Operating Chief of Staff
+              Mediahubink Sales, Strategy & Operating
+              Chief of Staff
             </div>
           </div>
 
-          <div className="nav-pill">Command Centre V3</div>
+          <div className="nav-pill">
+            Command Centre V3
+          </div>
         </nav>
 
         <section className="hero">
@@ -781,9 +831,10 @@ Use it to make a decision, recommendation, briefing or answer.
             </h1>
 
             <p className="lead">
-              Ask Alfred for your briefing, sales priorities,
-              Namibia market-entry actions or tonight&apos;s plan.
-              Speak naturally or type your instruction.
+              Ask Alfred for your briefing, sales
+              priorities, Namibia market-entry actions
+              or tonight&apos;s plan. Speak naturally or
+              type your instruction.
             </p>
 
             <div
@@ -791,34 +842,46 @@ Use it to make a decision, recommendation, briefing or answer.
               style={{ marginTop: "20px" }}
             >
               <div className="mode">
-                <strong>Primary commercial campaign</strong>
+                <strong>
+                  Primary commercial campaign
+                </strong>
+
                 <span>
-                  {primaryCampaign?.name || "Not configured"}
+                  {primaryCampaign?.name ||
+                    "Not configured"}
                 </span>
+
                 <span>
                   {primaryCampaign?.objective || ""}
                 </span>
               </div>
 
               <div className="mode">
-                <strong>Strategic market entry</strong>
+                <strong>
+                  Strategic market entry
+                </strong>
+
                 <span>
-                  {namibiaCampaign?.name || "Not configured"}
+                  {namibiaCampaign?.name ||
+                    "Not configured"}
                 </span>
+
                 <span>
-                  {namibiaCampaign?.objective || ""}
+                  {namibiaCampaign?.objective ||
+                    ""}
                 </span>
               </div>
 
               <div className="mode">
                 <strong>Live context</strong>
+
                 <span>
-                  {leads.length} leads · {projects.length} projects ·{" "}
+                  {leads.length} leads ·{" "}
+                  {projects.length} projects ·{" "}
                   {products.length} registered assets
                 </span>
-                <span>
-                  {contextMessage}
-                </span>
+
+                <span>{contextMessage}</span>
               </div>
             </div>
 
@@ -826,7 +889,10 @@ Use it to make a decision, recommendation, briefing or answer.
               className="actions"
               style={{ marginTop: "20px" }}
             >
-              <a className="btn btn-secondary" href="/">
+              <a
+                className="btn btn-secondary"
+                href="/"
+              >
                 Mission Control
               </a>
 
@@ -896,7 +962,9 @@ Use it to make a decision, recommendation, briefing or answer.
                 <button
                   className="btn btn-secondary"
                   onClick={startSpeech}
-                  disabled={loading || contextLoading}
+                  disabled={
+                    loading || contextLoading
+                  }
                 >
                   🎙️ Speak to Alfred
                 </button>
@@ -919,7 +987,9 @@ Use it to make a decision, recommendation, briefing or answer.
               ) : (
                 <button
                   className="btn btn-secondary"
-                  onClick={() => setAutoSpeak(!autoSpeak)}
+                  onClick={() =>
+                    setAutoSpeak(!autoSpeak)
+                  }
                 >
                   {autoSpeak
                     ? "🔊 Voice replies on"
@@ -942,8 +1012,8 @@ Use it to make a decision, recommendation, briefing or answer.
                 fontSize: "13px",
               }}
             >
-              Tip: Ctrl + Enter sends a typed request.
-              Speaking sends automatically.
+              Tip: Ctrl + Enter sends a typed
+              request. Speaking sends automatically.
             </p>
           </div>
         </section>
@@ -960,9 +1030,10 @@ Use it to make a decision, recommendation, briefing or answer.
             className="lead"
             style={{ fontSize: "16px" }}
           >
-            These are not generic prompts. Alfred receives your
-            live CRM, projects, demos, offers, knowledge,
-            portfolio and campaign context before answering.
+            These are not generic prompts. Alfred
+            receives your live CRM, projects, demos,
+            offers, knowledge, portfolio and campaign
+            context before answering.
           </p>
 
           <div
@@ -977,12 +1048,20 @@ Use it to make a decision, recommendation, briefing or answer.
                   textAlign: "left",
                   cursor: "pointer",
                 }}
-                onClick={() => askAlfred(action.prompt)}
-                disabled={loading || contextLoading}
+                onClick={() =>
+                  askAlfred(action.prompt)
+                }
+                disabled={
+                  loading || contextLoading
+                }
               >
-                <strong>{action.label}</strong>
+                <strong>
+                  {action.label}
+                </strong>
+
                 <span>
-                  Ask Alfred using live operating data.
+                  Ask Alfred using live operating
+                  data.
                 </span>
               </button>
             ))}
@@ -1002,9 +1081,13 @@ Use it to make a decision, recommendation, briefing or answer.
               className="mode"
               style={{ marginTop: "16px" }}
             >
-              <strong>Alfred is ready.</strong>
+              <strong>
+                Alfred is ready.
+              </strong>
+
               <span>
-                Try: Alfred, give me my daily briefing.
+                Try: Alfred, give me my daily
+                briefing.
               </span>
             </div>
           ) : (
@@ -1013,7 +1096,9 @@ Use it to make a decision, recommendation, briefing or answer.
                 <div
                   className="mode"
                   key={message.id}
-                  style={{ marginBottom: "14px" }}
+                  style={{
+                    marginBottom: "14px",
+                  }}
                 >
                   <strong>
                     {message.role === "user"
@@ -1021,14 +1106,17 @@ Use it to make a decision, recommendation, briefing or answer.
                       : "Alfred"}
                   </strong>
 
-                  {message.role === "assistant" ? (
+                  {message.role ===
+                  "assistant" ? (
                     <div className="markdown-output">
                       <ReactMarkdown>
                         {message.content}
                       </ReactMarkdown>
                     </div>
                   ) : (
-                    <span>{message.content}</span>
+                    <span>
+                      {message.content}
+                    </span>
                   )}
                 </div>
               ))}
@@ -1036,11 +1124,15 @@ Use it to make a decision, recommendation, briefing or answer.
               {loading && (
                 <div
                   className="mode"
-                  style={{ marginBottom: "14px" }}
+                  style={{
+                    marginBottom: "14px",
+                  }}
                 >
                   <strong>Alfred</strong>
+
                   <span>
-                    Reviewing your current operating picture...
+                    Reviewing your current operating
+                    picture...
                   </span>
                 </div>
               )}
