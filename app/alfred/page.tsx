@@ -109,6 +109,29 @@ type ChatMessage = {
   content: string;
 };
 
+type AlfredMode = "ask" | "command";
+
+type ParsedCommand = {
+  action: "update_lead" | "none";
+  company_search: string;
+  summary: string;
+  changes: {
+    stage?: string | null;
+    next_action?: string | null;
+    next_action_date?: string | null;
+    activity_note?: string | null;
+  };
+};
+
+type PendingLeadCommand = {
+  lead: Lead;
+  summary: string;
+  stage?: string | null;
+  nextAction?: string | null;
+  nextActionDate?: string | null;
+  activityNote?: string | null;
+};
+
 const quickActions = [
   {
     label: "Daily briefing",
@@ -225,10 +248,25 @@ Keep this short and decisive.`,
   },
 ];
 
+const validStages = [
+  "new",
+  "contacted",
+  "discovery",
+  "demo-interest",
+  "proposal-sent",
+  "negotiation",
+  "relationship-building",
+  "won",
+  "lost",
+];
+
 export default function AlfredCommandCentrePage() {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [alfredMode, setAlfredMode] =
+    useState<AlfredMode>("ask");
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -248,19 +286,40 @@ export default function AlfredCommandCentrePage() {
 
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState(
-    "Voice ready."
+  const [voiceStatus, setVoiceStatus] =
+    useState("Voice ready.");
+
+  const [pendingCommand, setPendingCommand] =
+    useState<PendingLeadCommand | null>(null);
+
+  const [commandSaving, setCommandSaving] =
+    useState(false);
+
+  const [commandMessage, setCommandMessage] =
+    useState("");
+
+  const currentDateTime = new Date().toLocaleString(
+    "en-GB",
+    {
+      timeZone: "Europe/London",
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
   );
 
-  const currentDateTime = new Date().toLocaleString("en-GB", {
-    timeZone: "Europe/London",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const currentDateISO = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Europe/London",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).format(new Date());
 
   async function fetchJson(url: string) {
     try {
@@ -280,7 +339,9 @@ export default function AlfredCommandCentrePage() {
 
   async function loadContext() {
     setContextLoading(true);
-    setContextMessage("Loading Alfred's business context...");
+    setContextMessage(
+      "Loading Alfred's business context..."
+    );
 
     const [
       leadData,
@@ -346,16 +407,16 @@ export default function AlfredCommandCentrePage() {
     window.speechSynthesis.cancel();
     window.speechSynthesis.resume();
 
-    const utterance = new SpeechSynthesisUtterance(
-      cleanedText
-    );
+    const utterance =
+      new SpeechSynthesisUtterance(cleanedText);
 
     utterance.lang = "en-GB";
     utterance.rate = 0.96;
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    const voices = window.speechSynthesis.getVoices();
+    const voices =
+      window.speechSynthesis.getVoices();
 
     const britishVoice =
       voices.find(
@@ -391,7 +452,6 @@ export default function AlfredCommandCentrePage() {
   }
 
   function testVoice() {
-    setVoiceStatus("Testing Alfred's voice...");
     speak(
       "Alfred is ready. If you can hear this, spoken replies are working."
     );
@@ -436,6 +496,33 @@ export default function AlfredCommandCentrePage() {
     speak(reply);
   }
 
+  function buildLeadContext() {
+    if (leads.length === 0) {
+      return "No CRM leads currently loaded.";
+    }
+
+    return leads
+      .slice(0, 60)
+      .map(
+        (lead) =>
+          `ID: ${lead.id}
+Company: ${lead.company || "Not added"}
+Contact: ${lead.name || "Not added"}
+Industry: ${lead.industry || "Not added"}
+Region: ${lead.region || "Not added"}
+Stage: ${lead.stage || "new"}
+Solution: ${lead.solution || "Not decided"}
+Next action: ${lead.next_action || "none"}
+Next action date: ${
+            lead.next_action_date ||
+            lead.follow_up_date ||
+            "none"
+          }
+Notes: ${lead.notes || "none"}`
+      )
+      .join("\n\n");
+  }
+
   function buildBusinessContext() {
     const campaignContext = defaultCampaigns
       .map(
@@ -447,8 +534,7 @@ Primary: ${campaign.primary ? "Yes" : "No"}
 Market: ${campaign.market}
 Sectors: ${campaign.sectors.join(", ")}
 Products: ${campaign.products.join(", ")}
-Objective: ${campaign.objective}
-Review cadence: ${campaign.reviewCadence}`
+Objective: ${campaign.objective}`
       )
       .join("\n\n");
 
@@ -462,42 +548,9 @@ Markets: ${product.markets.join(", ")}
 Sectors: ${product.sectors.join(", ")}
 Commercial status: ${product.commercialStatus}
 Use cases: ${product.useCases.join(", ")}
-URL: ${product.url}
-Description: ${product.description}`
+URL: ${product.url}`
       )
       .join("\n\n");
-
-    const leadContext =
-      leads.length > 0
-        ? leads
-            .slice(0, 50)
-            .map(
-              (lead) =>
-                `${lead.company || lead.name || "Unnamed lead"} |
-Contact: ${lead.name || "Not added"} |
-Industry: ${lead.industry || "Not added"} |
-Region: ${lead.region || "Not added"} |
-Stage: ${lead.stage || "new"} |
-Solution: ${lead.solution || "Not decided"} |
-Monthly value: £${
-                  lead.monthly_value ??
-                  lead.estimated_value ??
-                  0
-                } |
-Score: ${lead.lead_score ?? lead.score ?? 0} |
-Priority: ${lead.priority || "not set"} |
-Source: ${lead.source || "not set"} |
-Last contacted: ${lead.last_contacted || "not recorded"} |
-Next action: ${lead.next_action || "none"} |
-Next action date: ${
-                  lead.next_action_date ||
-                  lead.follow_up_date ||
-                  "none"
-                } |
-Notes: ${lead.notes || "none"}`
-            )
-            .join("\n")
-        : "No CRM leads currently loaded.";
 
     const projectContext =
       projects.length > 0
@@ -506,11 +559,14 @@ Notes: ${lead.notes || "none"}`
             .map(
               (project) =>
                 `${project.name} |
-Category: ${project.category || "not set"} |
-Audience: ${project.audience || "not set"} |
+Category: ${
+                  project.category || "not set"
+                } |
+Audience: ${
+                  project.audience || "not set"
+                } |
 Status: ${project.status || "not set"} |
-URL: ${project.url || "none"} |
-Description: ${project.description || "none"}`
+URL: ${project.url || "none"}`
             )
             .join("\n")
         : "No projects currently loaded.";
@@ -521,10 +577,7 @@ Description: ${project.description || "none"}`
             .slice(0, 30)
             .map(
               (demo) =>
-                `${demo.vertical}: ${demo.demo_url} |
-Status: ${demo.status || "not set"} |
-CTA: ${demo.cta || "none"} |
-Notes: ${demo.notes || "none"}`
+                `${demo.vertical}: ${demo.demo_url}`
             )
             .join("\n")
         : "No demos currently loaded.";
@@ -535,11 +588,11 @@ Notes: ${demo.notes || "none"}`
             .slice(0, 30)
             .map(
               (offer) =>
-                `${offer.name} |
-Type: ${offer.offer_type || "not set"} |
-Price: ${offer.price || "not set"} |
-Status: ${offer.status || "not set"} |
-Description: ${offer.description || "none"}`
+                `${offer.name} | ${
+                  offer.price || "not set"
+                } | ${
+                  offer.description || "none"
+                }`
             )
             .join("\n")
         : "No offers currently loaded.";
@@ -553,7 +606,7 @@ Description: ${offer.description || "none"}`
                 `${item.category} | ${item.title}: ${item.content}`
             )
             .join("\n")
-        : "No permanent knowledge currently loaded.";
+        : "No permanent knowledge loaded.";
 
     const thoughtContext =
       thoughts.length > 0
@@ -566,7 +619,7 @@ Description: ${offer.description || "none"}`
                 }`
             )
             .join("\n")
-        : "No recent Alfred memory currently loaded.";
+        : "No recent Alfred memory loaded.";
 
     const conversationContext =
       messages.length > 0
@@ -581,7 +634,7 @@ Description: ${offer.description || "none"}`
                 }: ${message.content}`
             )
             .join("\n\n")
-        : "No earlier conversation in this session.";
+        : "No earlier conversation.";
 
     return `
 ALFRED V3 OPERATING CONTEXT
@@ -589,52 +642,21 @@ ALFRED V3 OPERATING CONTEXT
 Current UK date and time:
 ${currentDateTime}
 
-ROLE UPDATE
+United Kingdom is the core commercial market.
 
-You are Alfred, Mediahubink's Sales, Strategy and Operating Chief of Staff.
-
-You are not primarily an editorial assistant.
-
-Your job is to help decide:
-- what matters now
-- what should happen next
-- who needs following up
-- what is stopping the next sale
-- which commercial opportunity deserves attention
-- which strategic relationship deserves attention
-- what should remain parked
-
-CURRENT MARKET STRUCTURE
-
-United Kingdom:
-Core commercial market.
-
-Namibia:
-Active AI market-entry market.
-Treat Namibia as a first-class strategic market, not as a generic SADC category.
-
-Other African and international markets:
-Only prioritise where there is real evidence, an existing relationship or a specific opportunity.
-
-IMPORTANT DISTINCTION
-
-Separate:
-1. UK commercial sales and revenue activity
-2. Namibia AI market-entry, strategic relationships, pilots and institutional development
-
-Do not treat every Namibia relationship as a normal sales lead.
+Namibia is an active AI market-entry market and must be treated separately from generic SADC activity.
 
 CURRENT CAMPAIGNS
 
 ${campaignContext}
 
-CURRENT PRODUCT AND PROOF-ASSET REGISTRY
+PRODUCT AND PROOF-ASSET REGISTRY
 
 ${productContext}
 
 LIVE CRM
 
-${leadContext}
+${buildLeadContext()}
 
 LIVE PROJECTS
 
@@ -652,11 +674,11 @@ PERMANENT KNOWLEDGE
 
 ${knowledgeContext}
 
-RECENT ALFRED MEMORY
+RECENT MEMORY
 
 ${thoughtContext}
 
-RECENT COMMAND CENTRE CONVERSATION
+RECENT CONVERSATION
 
 ${conversationContext}
 
@@ -664,20 +686,395 @@ OPERATING RULES
 
 - British English only.
 - No em dashes.
-- Be concise, practical and commercially useful.
-- Do not invent CRM activity, meetings, responses or commitments.
-- If data is missing, say so.
-- Prefer completing follow-ups over endlessly creating new prospect lists.
-- Prefer conversations over passive content activity when revenue is the objective.
-- Do not recommend building another demo unless it solves a specific active commercial or market-entry need.
-- UK sales and Namibia market entry can both be active, but they serve different objectives.
-- For daily planning, respect an evening working window of roughly 7:30 pm to 11:30 pm when relevant.
-- When asked what to do next, give a clear priority rather than a long menu of possibilities.
+- Do not invent CRM activity.
+- Prefer follow-ups and conversations when revenue is the objective.
+- Do not recommend unnecessary building.
+- UK commercial sales and Namibia market entry are separate operating tracks.
+- Give a clear priority when asked what to do next.
 `;
   }
 
-  async function askAlfred(question?: string) {
-    const actualPrompt = (question ?? prompt).trim();
+  function parseJsonReply(raw: string) {
+    const cleaned = raw
+      .trim()
+      .replace(/^```json/i, "")
+      .replace(/^```/i, "")
+      .replace(/```$/i, "")
+      .trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      const firstBrace = cleaned.indexOf("{");
+      const lastBrace = cleaned.lastIndexOf("}");
+
+      if (
+        firstBrace !== -1 &&
+        lastBrace > firstBrace
+      ) {
+        try {
+          return JSON.parse(
+            cleaned.slice(firstBrace, lastBrace + 1)
+          );
+        } catch {
+          return null;
+        }
+      }
+
+      return null;
+    }
+  }
+
+  function findLead(search: string) {
+    const term = search
+      .trim()
+      .toLowerCase();
+
+    if (!term) {
+      return [];
+    }
+
+    const exact = leads.filter((lead) => {
+      const company =
+        lead.company?.toLowerCase() || "";
+      const name = lead.name?.toLowerCase() || "";
+
+      return company === term || name === term;
+    });
+
+    if (exact.length > 0) {
+      return exact;
+    }
+
+    return leads.filter((lead) => {
+      const company =
+        lead.company?.toLowerCase() || "";
+      const name = lead.name?.toLowerCase() || "";
+
+      return (
+        company.includes(term) ||
+        term.includes(company) ||
+        name.includes(term)
+      );
+    });
+  }
+
+  function validateDate(value?: string | null) {
+    if (!value) {
+      return null;
+    }
+
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ) {
+      return value;
+    }
+
+    return null;
+  }
+
+  async function interpretCommand(
+    instruction: string
+  ) {
+    setLoading(true);
+    setCommandMessage("");
+    setPendingCommand(null);
+
+    const commandPrompt = `
+You are Alfred's CRM command interpreter.
+
+Current UK date:
+${currentDateISO}
+
+Current UK date and time:
+${currentDateTime}
+
+CRM RECORDS:
+
+${buildLeadContext()}
+
+USER COMMAND:
+
+${instruction}
+
+Determine whether this is a request to UPDATE AN EXISTING CRM LEAD.
+
+For now, supported changes are only:
+- stage
+- next_action
+- next_action_date
+- activity_note
+
+Do not create records.
+Do not delete records.
+Do not change money values.
+Do not change contact details.
+
+When the user says things such as:
+"I emailed PHC today"
+record that as activity_note.
+
+When the user says:
+"call them Thursday"
+convert Thursday to an exact YYYY-MM-DD date relative to the current UK date.
+
+Use these exact CRM stage values only:
+${validStages.join(", ")}
+
+Return ONLY valid JSON.
+
+Return this exact structure:
+
+{
+  "action": "update_lead",
+  "company_search": "company or contact phrase",
+  "summary": "short human-readable description",
+  "changes": {
+    "stage": null,
+    "next_action": null,
+    "next_action_date": null,
+    "activity_note": null
+  }
+}
+
+If this is not an existing-lead update, return:
+
+{
+  "action": "none",
+  "company_search": "",
+  "summary": "This command is not yet supported.",
+  "changes": {}
+}
+
+Never claim the database has already been updated.
+`;
+
+    try {
+      const response = await fetch("/api/alfred", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: commandPrompt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.reply) {
+        setCommandMessage(
+          data.error ||
+            "Alfred could not interpret that command."
+        );
+        return;
+      }
+
+      const parsed = parseJsonReply(
+        data.reply
+      ) as ParsedCommand | null;
+
+      if (
+        !parsed ||
+        parsed.action !== "update_lead"
+      ) {
+        setCommandMessage(
+          parsed?.summary ||
+            "That command is not supported yet."
+        );
+        return;
+      }
+
+      const matches = findLead(
+        parsed.company_search
+      );
+
+      if (matches.length === 0) {
+        setCommandMessage(
+          `I could not confidently match "${parsed.company_search}" to an existing CRM lead. No changes have been made.`
+        );
+        return;
+      }
+
+      if (matches.length > 1) {
+        setCommandMessage(
+          `I found more than one possible CRM match for "${parsed.company_search}". No changes have been made. Please use the full company name.`
+        );
+        return;
+      }
+
+      const lead = matches[0];
+
+      const proposedStage =
+        parsed.changes.stage &&
+        validStages.includes(
+          parsed.changes.stage
+        )
+          ? parsed.changes.stage
+          : null;
+
+      const proposedDate = validateDate(
+        parsed.changes.next_action_date
+      );
+
+      setPendingCommand({
+        lead,
+        summary: parsed.summary,
+        stage: proposedStage,
+        nextAction:
+          parsed.changes.next_action || null,
+        nextActionDate: proposedDate,
+        activityNote:
+          parsed.changes.activity_note || null,
+      });
+
+      setCommandMessage(
+        "Review the proposed CRM update below. Nothing has been changed yet."
+      );
+    } catch {
+      setCommandMessage(
+        "Something went wrong while Alfred interpreted the command."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatActivityNote(
+    note: string
+  ) {
+    return `${currentDateISO}: ${note.trim()}`;
+  }
+
+  async function confirmCommand() {
+    if (!pendingCommand) {
+      return;
+    }
+
+    setCommandSaving(true);
+    setCommandMessage("");
+
+    const lead = pendingCommand.lead;
+
+    const newNotes =
+      pendingCommand.activityNote
+        ? [
+            lead.notes?.trim(),
+            formatActivityNote(
+              pendingCommand.activityNote
+            ),
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : lead.notes || "";
+
+    const newStage =
+      pendingCommand.stage ||
+      lead.stage ||
+      "new";
+
+    const newNextAction =
+      pendingCommand.nextAction ??
+      lead.next_action ??
+      "";
+
+    const newNextActionDate =
+      pendingCommand.nextActionDate ??
+      lead.next_action_date ??
+      lead.follow_up_date ??
+      null;
+
+    try {
+      const response = await fetch(
+        `/api/leads/${lead.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: lead.name,
+            company: lead.company,
+            email: lead.email,
+            phone: lead.phone,
+            industry: lead.industry,
+            source: lead.source,
+            interest: lead.interest,
+            solution:
+              lead.solution || "Not decided",
+            stage: newStage,
+            notes: newNotes,
+            follow_up_date:
+              newNextActionDate,
+            estimated_value:
+              lead.estimated_value,
+            monthly_value:
+              lead.monthly_value,
+            score: lead.score,
+            lead_score: lead.lead_score,
+            next_action: newNextAction,
+            next_action_date:
+              newNextActionDate,
+            region: lead.region,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setCommandMessage(
+          data.error ||
+            "The CRM update could not be saved."
+        );
+        return;
+      }
+
+      const confirmation = `${
+        lead.company ||
+        lead.name ||
+        "CRM record"
+      } updated successfully.`;
+
+      setCommandMessage(confirmation);
+      setPendingCommand(null);
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: `command-success-${Date.now()}`,
+          role: "assistant",
+          content: confirmation,
+        },
+      ]);
+
+      await loadContext();
+
+      if (autoSpeak) {
+        speak(confirmation);
+      }
+    } catch {
+      setCommandMessage(
+        "Something went wrong while saving the CRM update."
+      );
+    } finally {
+      setCommandSaving(false);
+    }
+  }
+
+  function cancelCommand() {
+    setPendingCommand(null);
+    setCommandMessage(
+      "CRM update cancelled. No changes were made."
+    );
+  }
+
+  async function askAlfred(
+    question?: string
+  ) {
+    const actualPrompt = (
+      question ?? prompt
+    ).trim();
 
     if (!actualPrompt || loading) {
       return;
@@ -697,6 +1094,12 @@ OPERATING RULES
     ]);
 
     setPrompt("");
+
+    if (alfredMode === "command") {
+      await interpretCommand(actualPrompt);
+      return;
+    }
+
     setLoading(true);
 
     const fullPrompt = `
@@ -708,58 +1111,54 @@ ${actualPrompt}
 
 Respond as Alfred.
 
-Do not repeat all the loaded context back to Joash.
+Do not repeat all the loaded context.
 Use it to make a decision, recommendation, briefing or answer.
 `;
 
     try {
-      const response = await fetch("/api/alfred", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: fullPrompt,
-        }),
-      });
+      const response = await fetch(
+        "/api/alfred",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            prompt: fullPrompt,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       const answer =
         data.reply ||
         data.error ||
-        "I could not produce a response. Check Alfred's API connection.";
-
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: answer,
-      };
+        "I could not produce a response.";
 
       setMessages((current) => [
         ...current,
-        assistantMessage,
+        {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: answer,
+        },
       ]);
 
       if (autoSpeak && data.reply) {
-        setVoiceStatus(
-          "Trying automatic voice playback..."
-        );
-
         setTimeout(() => {
           speak(answer);
         }, 100);
       }
     } catch {
-      const answer =
-        "Something went wrong while speaking to Alfred. Check the Vercel logs or API connection.";
-
       setMessages((current) => [
         ...current,
         {
           id: `assistant-error-${Date.now()}`,
           role: "assistant",
-          content: answer,
+          content:
+            "Something went wrong while speaking to Alfred.",
         },
       ]);
     } finally {
@@ -768,7 +1167,8 @@ Use it to make a decision, recommendation, briefing or answer.
   }
 
   function startSpeech() {
-    const speechWindow = window as SpeechWindow;
+    const speechWindow =
+      window as SpeechWindow;
 
     const SpeechRecognition =
       speechWindow.SpeechRecognition ||
@@ -781,7 +1181,7 @@ Use it to make a decision, recommendation, briefing or answer.
           id: `speech-error-${Date.now()}`,
           role: "assistant",
           content:
-            "Speech input is not supported in this browser. Chrome on your Windows laptop should normally support it.",
+            "Speech input is not supported in this browser.",
         },
       ]);
 
@@ -790,7 +1190,8 @@ Use it to make a decision, recommendation, briefing or answer.
 
     stopSpeaking();
 
-    const speech = new SpeechRecognition();
+    const speech =
+      new SpeechRecognition();
 
     speech.continuous = false;
     speech.interimResults = false;
@@ -810,7 +1211,8 @@ Use it to make a decision, recommendation, briefing or answer.
           event.results[i][0].transcript;
       }
 
-      const cleanedTranscript = transcript.trim();
+      const cleanedTranscript =
+        transcript.trim();
 
       if (cleanedTranscript) {
         setPrompt(cleanedTranscript);
@@ -828,7 +1230,6 @@ Use it to make a decision, recommendation, briefing or answer.
 
     setRecognition(speech);
     setIsListening(true);
-
     speech.start();
   }
 
@@ -841,7 +1242,8 @@ Use it to make a decision, recommendation, briefing or answer.
     stopSpeaking();
     setMessages([]);
     setPrompt("");
-    setVoiceStatus("Voice ready.");
+    setPendingCommand(null);
+    setCommandMessage("");
   }
 
   function handleKeyDown(
@@ -877,8 +1279,8 @@ Use it to make a decision, recommendation, briefing or answer.
             </div>
 
             <div className="logo-subtitle">
-              Mediahubink Sales, Strategy & Operating
-              Chief of Staff
+              Mediahubink Sales, Strategy &
+              Operating Chief of Staff
             </div>
           </div>
 
@@ -898,10 +1300,9 @@ Use it to make a decision, recommendation, briefing or answer.
             </h1>
 
             <p className="lead">
-              Ask Alfred for your briefing, sales
-              priorities, Namibia market-entry actions
-              or tonight&apos;s plan. Speak naturally or
-              type your instruction.
+              Ask Alfred for guidance or switch to
+              Command Mode when you want Alfred to
+              prepare a CRM change.
             </p>
 
             <div
@@ -912,14 +1313,11 @@ Use it to make a decision, recommendation, briefing or answer.
                 <strong>
                   Primary commercial campaign
                 </strong>
-
                 <span>
-                  {primaryCampaign?.name ||
-                    "Not configured"}
+                  {primaryCampaign?.name}
                 </span>
-
                 <span>
-                  {primaryCampaign?.objective || ""}
+                  {primaryCampaign?.objective}
                 </span>
               </div>
 
@@ -927,27 +1325,21 @@ Use it to make a decision, recommendation, briefing or answer.
                 <strong>
                   Strategic market entry
                 </strong>
-
                 <span>
-                  {namibiaCampaign?.name ||
-                    "Not configured"}
+                  {namibiaCampaign?.name}
                 </span>
-
                 <span>
-                  {namibiaCampaign?.objective ||
-                    ""}
+                  {namibiaCampaign?.objective}
                 </span>
               </div>
 
               <div className="mode">
                 <strong>Live context</strong>
-
                 <span>
                   {leads.length} leads ·{" "}
                   {projects.length} projects ·{" "}
                   {products.length} registered assets
                 </span>
-
                 <span>{contextMessage}</span>
               </div>
             </div>
@@ -994,17 +1386,73 @@ Use it to make a decision, recommendation, briefing or answer.
 
           <div className="card">
             <div className="panel-title">
-              Speak to Alfred
+              Talk to Alfred
+            </div>
+
+            <div
+              className="actions"
+              style={{
+                marginTop: "14px",
+                marginBottom: "16px",
+              }}
+            >
+              <button
+                className={
+                  alfredMode === "ask"
+                    ? "btn"
+                    : "btn btn-secondary"
+                }
+                onClick={() => {
+                  setAlfredMode("ask");
+                  setPendingCommand(null);
+                  setCommandMessage("");
+                }}
+              >
+                Ask Mode
+              </button>
+
+              <button
+                className={
+                  alfredMode === "command"
+                    ? "btn"
+                    : "btn btn-secondary"
+                }
+                onClick={() => {
+                  setAlfredMode("command");
+                  setCommandMessage("");
+                }}
+              >
+                Command Mode
+              </button>
+            </div>
+
+            <div className="mode">
+              <strong>
+                {alfredMode === "ask"
+                  ? "Ask Mode"
+                  : "Command Mode"}
+              </strong>
+
+              <span>
+                {alfredMode === "ask"
+                  ? "Ask for briefings, priorities, analysis and recommendations."
+                  : "Tell Alfred what happened. Alfred will prepare a CRM update and wait for your confirmation."}
+              </span>
             </div>
 
             <textarea
               className="input-box"
+              style={{ marginTop: "16px" }}
               value={prompt}
               onChange={(event) =>
                 setPrompt(event.target.value)
               }
               onKeyDown={handleKeyDown}
-              placeholder="Example: Alfred, give me my briefing and tell me what I should do first tonight."
+              placeholder={
+                alfredMode === "ask"
+                  ? "Example: Alfred, give me my briefing and tell me what I should do first."
+                  : "Example: I emailed PHC today. Set the next action to call them tomorrow and move them to Contacted."
+              }
             />
 
             <div
@@ -1021,8 +1469,10 @@ Use it to make a decision, recommendation, briefing or answer.
                 }
               >
                 {loading
-                  ? "Alfred is thinking..."
-                  : "Ask Alfred"}
+                  ? "Alfred is working..."
+                  : alfredMode === "command"
+                    ? "Prepare update"
+                    : "Ask Alfred"}
               </button>
 
               {!isListening ? (
@@ -1030,7 +1480,8 @@ Use it to make a decision, recommendation, briefing or answer.
                   className="btn btn-secondary"
                   onClick={startSpeech}
                   disabled={
-                    loading || contextLoading
+                    loading ||
+                    contextLoading
                   }
                 >
                   🎙️ Speak to Alfred
@@ -1082,7 +1533,7 @@ Use it to make a decision, recommendation, briefing or answer.
                 className="btn btn-secondary"
                 onClick={clearConversation}
               >
-                Clear conversation
+                Clear
               </button>
             </div>
 
@@ -1093,83 +1544,157 @@ Use it to make a decision, recommendation, briefing or answer.
               <strong>Voice status</strong>
               <span>{voiceStatus}</span>
             </div>
-
-            <p
-              style={{
-                color: "#a3a3a3",
-                marginTop: "12px",
-                fontSize: "13px",
-              }}
-            >
-              iPhone tip: Safari may block automatic
-              speech after Alfred finishes thinking.
-              If that happens, tap Hear Alfred on the
-              reply. The direct tap allows iOS to start
-              the spoken response.
-            </p>
-
-            <p
-              style={{
-                color: "#a3a3a3",
-                marginTop: "8px",
-                fontSize: "13px",
-              }}
-            >
-              Ctrl + Enter sends a typed request.
-              Speaking sends automatically.
-            </p>
           </div>
         </section>
 
-        <section
-          className="card"
-          style={{ marginTop: "28px" }}
-        >
-          <div className="panel-title">
-            Quick directions
-          </div>
-
-          <p
-            className="lead"
-            style={{ fontSize: "16px" }}
+        {alfredMode === "command" && (
+          <section
+            className="card"
+            style={{ marginTop: "28px" }}
           >
-            These are not generic prompts. Alfred
-            receives your live CRM, projects, demos,
-            offers, knowledge, portfolio and campaign
-            context before answering.
-          </p>
+            <div className="panel-title">
+              Command approval
+            </div>
 
-          <div
-            className="mode-grid"
-            style={{ marginTop: "18px" }}
-          >
-            {quickActions.map((action) => (
-              <button
-                key={action.label}
+            {commandMessage && (
+              <div
                 className="mode"
-                style={{
-                  textAlign: "left",
-                  cursor: "pointer",
-                }}
-                onClick={() =>
-                  askAlfred(action.prompt)
-                }
-                disabled={
-                  loading || contextLoading
-                }
+                style={{ marginTop: "16px" }}
+              >
+                <strong>Status</strong>
+                <span>{commandMessage}</span>
+              </div>
+            )}
+
+            {!pendingCommand ? (
+              <div
+                className="mode"
+                style={{ marginTop: "16px" }}
               >
                 <strong>
-                  {action.label}
+                  No pending CRM change
+                </strong>
+                <span>
+                  Speak or type an instruction above.
+                </span>
+              </div>
+            ) : (
+              <div
+                className="mode"
+                style={{ marginTop: "16px" }}
+              >
+                <strong>
+                  Proposed CRM update
                 </strong>
 
                 <span>
-                  Ask Alfred using live operating
-                  data.
+                  Company:{" "}
+                  {pendingCommand.lead.company ||
+                    pendingCommand.lead.name}
                 </span>
-              </button>
-            ))}
-          </div>
-        </section>
+
+                <span>
+                  {pendingCommand.summary}
+                </span>
+
+                {pendingCommand.stage && (
+                  <span>
+                    Stage:{" "}
+                    {pendingCommand.lead.stage ||
+                      "new"}{" "}
+                    → {pendingCommand.stage}
+                  </span>
+                )}
+
+                {pendingCommand.nextAction && (
+                  <span>
+                    Next action:{" "}
+                    {pendingCommand.nextAction}
+                  </span>
+                )}
+
+                {pendingCommand.nextActionDate && (
+                  <span>
+                    Due:{" "}
+                    {pendingCommand.nextActionDate}
+                  </span>
+                )}
+
+                {pendingCommand.activityNote && (
+                  <span>
+                    Activity note:{" "}
+                    {pendingCommand.activityNote}
+                  </span>
+                )}
+
+                <div
+                  className="actions"
+                  style={{ marginTop: "16px" }}
+                >
+                  <button
+                    className="btn"
+                    onClick={confirmCommand}
+                    disabled={commandSaving}
+                  >
+                    {commandSaving
+                      ? "Saving..."
+                      : "Confirm update"}
+                  </button>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={cancelCommand}
+                    disabled={commandSaving}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {alfredMode === "ask" && (
+          <section
+            className="card"
+            style={{ marginTop: "28px" }}
+          >
+            <div className="panel-title">
+              Quick directions
+            </div>
+
+            <div
+              className="mode-grid"
+              style={{ marginTop: "18px" }}
+            >
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  className="mode"
+                  style={{
+                    textAlign: "left",
+                    cursor: "pointer",
+                  }}
+                  onClick={() =>
+                    askAlfred(action.prompt)
+                  }
+                  disabled={
+                    loading ||
+                    contextLoading
+                  }
+                >
+                  <strong>
+                    {action.label}
+                  </strong>
+                  <span>
+                    Ask Alfred using live operating
+                    data.
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section
           className="card"
@@ -1187,10 +1712,9 @@ Use it to make a decision, recommendation, briefing or answer.
               <strong>
                 Alfred is ready.
               </strong>
-
               <span>
-                Try: Alfred, give me my daily
-                briefing.
+                Ask a question or give Alfred a
+                command.
               </span>
             </div>
           ) : (
@@ -1227,7 +1751,9 @@ Use it to make a decision, recommendation, briefing or answer.
                         <button
                           className="btn btn-secondary"
                           onClick={() =>
-                            speak(message.content)
+                            speak(
+                              message.content
+                            )
                           }
                         >
                           🔊 Hear Alfred
@@ -1241,22 +1767,6 @@ Use it to make a decision, recommendation, briefing or answer.
                   )}
                 </div>
               ))}
-
-              {loading && (
-                <div
-                  className="mode"
-                  style={{
-                    marginBottom: "14px",
-                  }}
-                >
-                  <strong>Alfred</strong>
-
-                  <span>
-                    Reviewing your current operating
-                    picture...
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </section>
@@ -1294,12 +1804,12 @@ Use it to make a decision, recommendation, briefing or answer.
             </div>
 
             <div className="mini-card">
-              <h3>Knowledge records</h3>
+              <h3>Knowledge</h3>
               <p>{knowledge.length}</p>
             </div>
 
             <div className="mini-card">
-              <h3>Memory records</h3>
+              <h3>Memory</h3>
               <p>{thoughts.length}</p>
             </div>
           </div>
