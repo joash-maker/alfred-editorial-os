@@ -248,6 +248,9 @@ export default function AlfredCommandCentrePage() {
 
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState(
+    "Voice ready."
+  );
 
   const currentDateTime = new Date().toLocaleString("en-GB", {
     timeZone: "Europe/London",
@@ -314,37 +317,54 @@ export default function AlfredCommandCentrePage() {
     return text
       .replace(/[#*_`>]/g, "")
       .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
       .replace(/\n{2,}/g, ". ")
       .replace(/\n/g, ". ")
+      .replace(/\s{2,}/g, " ")
       .trim();
   }
 
   function speak(text: string) {
-    if (
-      typeof window === "undefined" ||
-      !("speechSynthesis" in window) ||
-      !text.trim()
-    ) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+      setVoiceStatus(
+        "Spoken replies are not supported by this browser."
+      );
+      return;
+    }
+
+    const cleanedText = cleanForSpeech(text);
+
+    if (!cleanedText) {
+      setVoiceStatus("There is nothing to read aloud.");
       return;
     }
 
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
 
     const utterance = new SpeechSynthesisUtterance(
-      cleanForSpeech(text)
+      cleanedText
     );
 
     utterance.lang = "en-GB";
     utterance.rate = 0.96;
     utterance.pitch = 1;
+    utterance.volume = 1;
 
     const voices = window.speechSynthesis.getVoices();
 
-    const britishVoice = voices.find(
-      (voice) =>
-        voice.lang.toLowerCase() === "en-gb" ||
-        voice.lang.toLowerCase().startsWith("en-gb")
-    );
+    const britishVoice =
+      voices.find(
+        (voice) =>
+          voice.lang.toLowerCase() === "en-gb"
+      ) ||
+      voices.find((voice) =>
+        voice.lang.toLowerCase().startsWith("en")
+      );
 
     if (britishVoice) {
       utterance.voice = britishVoice;
@@ -352,17 +372,29 @@ export default function AlfredCommandCentrePage() {
 
     utterance.onstart = () => {
       setIsSpeaking(true);
+      setVoiceStatus("Alfred is speaking...");
     };
 
     utterance.onend = () => {
       setIsSpeaking(false);
+      setVoiceStatus("Voice ready.");
     };
 
     utterance.onerror = () => {
       setIsSpeaking(false);
+      setVoiceStatus(
+        "Automatic playback was blocked. Tap Hear Alfred on the reply."
+      );
     };
 
     window.speechSynthesis.speak(utterance);
+  }
+
+  function testVoice() {
+    setVoiceStatus("Testing Alfred's voice...");
+    speak(
+      "Alfred is ready. If you can hear this, spoken replies are working."
+    );
   }
 
   function stopSpeaking() {
@@ -374,6 +406,34 @@ export default function AlfredCommandCentrePage() {
     }
 
     setIsSpeaking(false);
+    setVoiceStatus("Voice stopped.");
+  }
+
+  function getLastAssistantReply() {
+    const assistantMessages = messages.filter(
+      (message) => message.role === "assistant"
+    );
+
+    if (assistantMessages.length === 0) {
+      return "";
+    }
+
+    return assistantMessages[
+      assistantMessages.length - 1
+    ].content;
+  }
+
+  function hearLastReply() {
+    const reply = getLastAssistantReply();
+
+    if (!reply) {
+      setVoiceStatus(
+        "Alfred has not given a reply yet."
+      );
+      return;
+    }
+
+    speak(reply);
   }
 
   function buildBusinessContext() {
@@ -682,7 +742,13 @@ Use it to make a decision, recommendation, briefing or answer.
       ]);
 
       if (autoSpeak && data.reply) {
-        speak(answer);
+        setVoiceStatus(
+          "Trying automatic voice playback..."
+        );
+
+        setTimeout(() => {
+          speak(answer);
+        }, 100);
       }
     } catch {
       const answer =
@@ -775,6 +841,7 @@ Use it to make a decision, recommendation, briefing or answer.
     stopSpeaking();
     setMessages([]);
     setPrompt("");
+    setVoiceStatus("Voice ready.");
   }
 
   function handleKeyDown(
@@ -977,25 +1044,39 @@ Use it to make a decision, recommendation, briefing or answer.
                 </button>
               )}
 
-              {isSpeaking ? (
+              <button
+                className="btn btn-secondary"
+                onClick={testVoice}
+              >
+                🔊 Test voice
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={hearLastReply}
+              >
+                ▶️ Hear last reply
+              </button>
+
+              {isSpeaking && (
                 <button
                   className="btn btn-secondary"
                   onClick={stopSpeaking}
                 >
                   🔇 Stop Alfred
                 </button>
-              ) : (
-                <button
-                  className="btn btn-secondary"
-                  onClick={() =>
-                    setAutoSpeak(!autoSpeak)
-                  }
-                >
-                  {autoSpeak
-                    ? "🔊 Voice replies on"
-                    : "🔈 Voice replies off"}
-                </button>
               )}
+
+              <button
+                className="btn btn-secondary"
+                onClick={() =>
+                  setAutoSpeak(!autoSpeak)
+                }
+              >
+                {autoSpeak
+                  ? "🔊 Auto voice on"
+                  : "🔈 Auto voice off"}
+              </button>
 
               <button
                 className="btn btn-secondary"
@@ -1005,6 +1086,14 @@ Use it to make a decision, recommendation, briefing or answer.
               </button>
             </div>
 
+            <div
+              className="mode"
+              style={{ marginTop: "14px" }}
+            >
+              <strong>Voice status</strong>
+              <span>{voiceStatus}</span>
+            </div>
+
             <p
               style={{
                 color: "#a3a3a3",
@@ -1012,8 +1101,22 @@ Use it to make a decision, recommendation, briefing or answer.
                 fontSize: "13px",
               }}
             >
-              Tip: Ctrl + Enter sends a typed
-              request. Speaking sends automatically.
+              iPhone tip: Safari may block automatic
+              speech after Alfred finishes thinking.
+              If that happens, tap Hear Alfred on the
+              reply. The direct tap allows iOS to start
+              the spoken response.
+            </p>
+
+            <p
+              style={{
+                color: "#a3a3a3",
+                marginTop: "8px",
+                fontSize: "13px",
+              }}
+            >
+              Ctrl + Enter sends a typed request.
+              Speaking sends automatically.
             </p>
           </div>
         </section>
@@ -1108,11 +1211,29 @@ Use it to make a decision, recommendation, briefing or answer.
 
                   {message.role ===
                   "assistant" ? (
-                    <div className="markdown-output">
-                      <ReactMarkdown>
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
+                    <>
+                      <div className="markdown-output">
+                        <ReactMarkdown>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+
+                      <div
+                        className="actions"
+                        style={{
+                          marginTop: "12px",
+                        }}
+                      >
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() =>
+                            speak(message.content)
+                          }
+                        >
+                          🔊 Hear Alfred
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <span>
                       {message.content}
