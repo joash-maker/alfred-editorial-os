@@ -103,6 +103,21 @@ type Thought = {
   created_at?: string;
 };
 
+type Interaction = {
+  id: string;
+  lead_id: string;
+  created_at?: string | null;
+  occurred_at?: string | null;
+  contact_name?: string | null;
+  channel?: string | null;
+  direction?: string | null;
+  outcome?: string | null;
+  summary?: string | null;
+  next_action?: string | null;
+  next_action_date?: string | null;
+  source?: string | null;
+};
+
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -112,25 +127,67 @@ type ChatMessage = {
 type AlfredMode = "ask" | "command";
 
 type ParsedCommand = {
-  action: "update_lead" | "none";
+  action: "lead_command" | "none";
   company_search: string;
   summary: string;
+  interaction: {
+    should_record?: boolean;
+    occurred_on?: string | null;
+    contact_name?: string | null;
+    channel?: string | null;
+    direction?: string | null;
+    outcome?: string | null;
+    summary?: string | null;
+  };
   changes: {
     stage?: string | null;
     next_action?: string | null;
     next_action_date?: string | null;
-    activity_note?: string | null;
   };
 };
 
 type PendingLeadCommand = {
   lead: Lead;
   summary: string;
+  shouldRecordInteraction: boolean;
+  occurredOn?: string | null;
+  contactName?: string | null;
+  channel?: string | null;
+  direction?: string | null;
+  outcome?: string | null;
+  interactionSummary?: string | null;
   stage?: string | null;
   nextAction?: string | null;
   nextActionDate?: string | null;
-  activityNote?: string | null;
 };
+
+const validStages = [
+  "new",
+  "contacted",
+  "discovery",
+  "demo-interest",
+  "proposal-sent",
+  "negotiation",
+  "relationship-building",
+  "won",
+  "lost",
+];
+
+const validChannels = [
+  "email",
+  "phone",
+  "linkedin",
+  "whatsapp",
+  "meeting",
+  "demo",
+  "website",
+  "other",
+];
+
+const validDirections = [
+  "outbound",
+  "inbound",
+];
 
 const quickActions = [
   {
@@ -148,11 +205,13 @@ Then cover:
 6. Risks or things I am neglecting
 7. The three actions that matter most today
 
+Use interaction history as well as the current CRM state.
+
 Do not invent activity that is not present in the loaded data.`,
   },
   {
     label: "What should I do next?",
-    prompt: `Review my current leads, campaigns, projects, opportunities and strategic activity.
+    prompt: `Review my current leads, interaction history, campaigns, projects, opportunities and strategic activity.
 
 Tell me the single best action to take next.
 
@@ -162,10 +221,13 @@ Prefer advancing existing conversations and overdue follow-ups before creating u
   },
   {
     label: "Sales follow-ups",
-    prompt: `Review my CRM and identify the sales follow-ups that deserve attention now.
+    prompt: `Review my CRM and interaction history.
+
+Identify the sales follow-ups that deserve attention now.
 
 For each important one, tell me:
 - company
+- most recent interaction
 - current situation
 - why it matters
 - best next channel
@@ -177,7 +239,7 @@ Prioritise real conversations over generic prospecting.`,
     label: "Tonight's plan",
     prompt: `Build my practical work plan for tonight from 7:30 pm to 11:30 pm UK time.
 
-Use my live Alfred data.
+Use my live Alfred data and interaction history.
 
 Prioritise:
 1. revenue-generating action
@@ -202,6 +264,7 @@ Review:
 - Kaya
 - voice and enquiry-system capabilities
 - institutional or strategic relationships visible in Alfred
+- recent interactions
 - possible pilot opportunities
 - outstanding relationship actions
 
@@ -209,11 +272,12 @@ Tell me what would genuinely advance market entry next.`,
   },
   {
     label: "Review pipeline",
-    prompt: `Review my commercial pipeline as Alfred, my operating chief of staff.
+    prompt: `Review my commercial pipeline and interaction history as Alfred, my operating chief of staff.
 
 Tell me:
 - strongest opportunities
 - stalled opportunities
+- recent contact activity
 - follow-ups due
 - likely distractions
 - where pipeline value is concentrated
@@ -221,7 +285,7 @@ Tell me:
   },
   {
     label: "What am I neglecting?",
-    prompt: `Look across my leads, projects, campaigns, follow-ups and strategic activity.
+    prompt: `Look across my leads, interaction history, projects, campaigns, follow-ups and strategic activity.
 
 Tell me what I appear to be neglecting.
 
@@ -248,59 +312,176 @@ Keep this short and decisive.`,
   },
 ];
 
-const validStages = [
-  "new",
-  "contacted",
-  "discovery",
-  "demo-interest",
-  "proposal-sent",
-  "negotiation",
-  "relationship-building",
-  "won",
-  "lost",
-];
+function getLondonDateISO() {
+  const parts = new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      timeZone: "Europe/London",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).formatToParts(new Date());
+
+  const year =
+    parts.find(
+      (part) => part.type === "year"
+    )?.value || "";
+
+  const month =
+    parts.find(
+      (part) => part.type === "month"
+    )?.value || "";
+
+  const day =
+    parts.find(
+      (part) => part.type === "day"
+    )?.value || "";
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateOnly(
+  value?: string | null
+) {
+  if (!value) {
+    return "Not set";
+  }
+
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})/
+  );
+
+  if (!match) {
+    return value;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  const date = new Date(
+    Date.UTC(year, month - 1, day)
+  );
+
+  return date.toLocaleDateString(
+    "en-GB",
+    {
+      timeZone: "UTC",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  );
+}
+
+function capitalise(value?: string | null) {
+  if (!value) {
+    return "Not set";
+  }
+
+  return value
+    .split(/[\s-]+/)
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() +
+        word.slice(1)
+    )
+    .join(" ");
+}
 
 export default function AlfredCommandCentrePage() {
-  const [prompt, setPrompt] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [prompt, setPrompt] =
+    useState("");
+
+  const [messages, setMessages] =
+    useState<ChatMessage[]>([]);
+
+  const [loading, setLoading] =
+    useState(false);
 
   const [alfredMode, setAlfredMode] =
     useState<AlfredMode>("ask");
 
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [demos, setDemos] = useState<Demo[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
-  const [thoughts, setThoughts] = useState<Thought[]>([]);
+  const [leads, setLeads] =
+    useState<Lead[]>([]);
 
-  const [contextLoading, setContextLoading] = useState(true);
-  const [contextMessage, setContextMessage] = useState(
+  const [projects, setProjects] =
+    useState<Project[]>([]);
+
+  const [demos, setDemos] =
+    useState<Demo[]>([]);
+
+  const [offers, setOffers] =
+    useState<Offer[]>([]);
+
+  const [knowledge, setKnowledge] =
+    useState<Knowledge[]>([]);
+
+  const [thoughts, setThoughts] =
+    useState<Thought[]>([]);
+
+  const [interactions, setInteractions] =
+    useState<Interaction[]>([]);
+
+  const [
+    contextLoading,
+    setContextLoading,
+  ] = useState(true);
+
+  const [
+    contextMessage,
+    setContextMessage,
+  ] = useState(
     "Loading Alfred's business context..."
   );
 
-  const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] =
-    useState<SpeechRecognitionType | null>(null);
+  const [
+    isListening,
+    setIsListening,
+  ] = useState(false);
 
-  const [autoSpeak, setAutoSpeak] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [
+    recognition,
+    setRecognition,
+  ] =
+    useState<SpeechRecognitionType | null>(
+      null
+    );
+
+  const [autoSpeak, setAutoSpeak] =
+    useState(true);
+
+  const [isSpeaking, setIsSpeaking] =
+    useState(false);
+
   const [voiceStatus, setVoiceStatus] =
     useState("Voice ready.");
 
-  const [pendingCommand, setPendingCommand] =
-    useState<PendingLeadCommand | null>(null);
+  const [
+    pendingCommand,
+    setPendingCommand,
+  ] =
+    useState<PendingLeadCommand | null>(
+      null
+    );
 
-  const [commandSaving, setCommandSaving] =
-    useState(false);
+  const [
+    commandSaving,
+    setCommandSaving,
+  ] = useState(false);
 
-  const [commandMessage, setCommandMessage] =
-    useState("");
+  const [
+    commandMessage,
+    setCommandMessage,
+  ] = useState("");
 
-  const currentDateTime = new Date().toLocaleString(
-    "en-GB",
-    {
+  const currentDateISO =
+    getLondonDateISO();
+
+  const currentDateTime =
+    new Date().toLocaleString("en-GB", {
       timeZone: "Europe/London",
       weekday: "long",
       day: "2-digit",
@@ -308,18 +489,7 @@ export default function AlfredCommandCentrePage() {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }
-  );
-
-  const currentDateISO = new Intl.DateTimeFormat(
-    "en-CA",
-    {
-      timeZone: "Europe/London",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }
-  ).format(new Date());
+    });
 
   async function fetchJson(url: string) {
     try {
@@ -337,8 +507,62 @@ export default function AlfredCommandCentrePage() {
     }
   }
 
+  async function loadInteractionHistory(
+    loadedLeads: Lead[]
+  ) {
+    if (loadedLeads.length === 0) {
+      setInteractions([]);
+      return [];
+    }
+
+    try {
+      const results = await Promise.all(
+        loadedLeads
+          .slice(0, 50)
+          .map(async (lead) => {
+            const data = await fetchJson(
+              `/api/leads/${lead.id}/interactions`
+            );
+
+            return Array.isArray(
+              data?.interactions
+            )
+              ? data.interactions
+              : [];
+          })
+      );
+
+      const combined =
+        results.flat() as Interaction[];
+
+      combined.sort((a, b) => {
+        const aTime = new Date(
+          a.occurred_at ||
+            a.created_at ||
+            0
+        ).getTime();
+
+        const bTime = new Date(
+          b.occurred_at ||
+            b.created_at ||
+            0
+        ).getTime();
+
+        return bTime - aTime;
+      });
+
+      setInteractions(combined);
+
+      return combined;
+    } catch {
+      setInteractions([]);
+      return [];
+    }
+  }
+
   async function loadContext() {
     setContextLoading(true);
+
     setContextMessage(
       "Loading Alfred's business context..."
     );
@@ -355,29 +579,53 @@ export default function AlfredCommandCentrePage() {
       fetchJson("/api/projects/list"),
       fetchJson("/api/demos/list"),
       fetchJson("/api/offers/list"),
-      fetchJson("/api/knowledge/list"),
+      fetchJson(
+        "/api/knowledge/list"
+      ),
       fetchJson("/api/thoughts/list"),
     ]);
 
-    setLeads(leadData?.leads || []);
-    setProjects(projectData?.projects || []);
+    const loadedLeads =
+      leadData?.leads || [];
+
+    setLeads(loadedLeads);
+    setProjects(
+      projectData?.projects || []
+    );
     setDemos(demoData?.demos || []);
     setOffers(offerData?.offers || []);
-    setKnowledge(knowledgeData?.knowledge || []);
-    setThoughts(thoughtData?.thoughts || []);
+    setKnowledge(
+      knowledgeData?.knowledge || []
+    );
+    setThoughts(
+      thoughtData?.thoughts || []
+    );
+
+    const loadedInteractions =
+      await loadInteractionHistory(
+        loadedLeads
+      );
 
     setContextLoading(false);
-    setContextMessage("Business context loaded.");
+
+    setContextMessage(
+      `Business context loaded. ${loadedInteractions.length} interactions available.`
+    );
   }
 
   useEffect(() => {
     loadContext();
   }, []);
 
-  function cleanForSpeech(text: string) {
+  function cleanForSpeech(
+    text: string
+  ) {
     return text
       .replace(/[#*_`>]/g, "")
-      .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+      .replace(
+        /\[(.*?)\]\((.*?)\)/g,
+        "$1"
+      )
       .replace(/https?:\/\/\S+/g, "")
       .replace(/\n{2,}/g, ". ")
       .replace(/\n/g, ". ")
@@ -386,21 +634,31 @@ export default function AlfredCommandCentrePage() {
   }
 
   function speak(text: string) {
-    if (typeof window === "undefined") {
+    if (
+      typeof window === "undefined"
+    ) {
       return;
     }
 
-    if (!("speechSynthesis" in window)) {
+    if (
+      !(
+        "speechSynthesis" in
+        window
+      )
+    ) {
       setVoiceStatus(
         "Spoken replies are not supported by this browser."
       );
       return;
     }
 
-    const cleanedText = cleanForSpeech(text);
+    const cleanedText =
+      cleanForSpeech(text);
 
     if (!cleanedText) {
-      setVoiceStatus("There is nothing to read aloud.");
+      setVoiceStatus(
+        "There is nothing to read aloud."
+      );
       return;
     }
 
@@ -408,7 +666,9 @@ export default function AlfredCommandCentrePage() {
     window.speechSynthesis.resume();
 
     const utterance =
-      new SpeechSynthesisUtterance(cleanedText);
+      new SpeechSynthesisUtterance(
+        cleanedText
+      );
 
     utterance.lang = "en-GB";
     utterance.rate = 0.96;
@@ -421,24 +681,32 @@ export default function AlfredCommandCentrePage() {
     const britishVoice =
       voices.find(
         (voice) =>
-          voice.lang.toLowerCase() === "en-gb"
+          voice.lang.toLowerCase() ===
+          "en-gb"
       ) ||
       voices.find((voice) =>
-        voice.lang.toLowerCase().startsWith("en")
+        voice.lang
+          .toLowerCase()
+          .startsWith("en")
       );
 
     if (britishVoice) {
-      utterance.voice = britishVoice;
+      utterance.voice =
+        britishVoice;
     }
 
     utterance.onstart = () => {
       setIsSpeaking(true);
-      setVoiceStatus("Alfred is speaking...");
+      setVoiceStatus(
+        "Alfred is speaking..."
+      );
     };
 
     utterance.onend = () => {
       setIsSpeaking(false);
-      setVoiceStatus("Voice ready.");
+      setVoiceStatus(
+        "Voice ready."
+      );
     };
 
     utterance.onerror = () => {
@@ -448,7 +716,9 @@ export default function AlfredCommandCentrePage() {
       );
     };
 
-    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.speak(
+      utterance
+    );
   }
 
   function testVoice() {
@@ -466,15 +736,21 @@ export default function AlfredCommandCentrePage() {
     }
 
     setIsSpeaking(false);
-    setVoiceStatus("Voice stopped.");
+    setVoiceStatus(
+      "Voice stopped."
+    );
   }
 
   function getLastAssistantReply() {
-    const assistantMessages = messages.filter(
-      (message) => message.role === "assistant"
-    );
+    const assistantMessages =
+      messages.filter(
+        (message) =>
+          message.role === "assistant"
+      );
 
-    if (assistantMessages.length === 0) {
+    if (
+      assistantMessages.length === 0
+    ) {
       return "";
     }
 
@@ -484,7 +760,8 @@ export default function AlfredCommandCentrePage() {
   }
 
   function hearLastReply() {
-    const reply = getLastAssistantReply();
+    const reply =
+      getLastAssistantReply();
 
     if (!reply) {
       setVoiceStatus(
@@ -496,6 +773,16 @@ export default function AlfredCommandCentrePage() {
     speak(reply);
   }
 
+  function interactionsForLead(
+    leadId: string
+  ) {
+    return interactions.filter(
+      (interaction) =>
+        interaction.lead_id ===
+        leadId
+    );
+  }
+
   function buildLeadContext() {
     if (leads.length === 0) {
       return "No CRM leads currently loaded.";
@@ -503,45 +790,68 @@ export default function AlfredCommandCentrePage() {
 
     return leads
       .slice(0, 60)
-      .map(
-        (lead) =>
-          `ID: ${lead.id}
+      .map((lead) => {
+        const recent =
+          interactionsForLead(
+            lead.id
+          ).slice(0, 5);
+
+        const interactionText =
+          recent.length > 0
+            ? recent
+                .map(
+                  (
+                    interaction
+                  ) =>
+                    `${interaction.occurred_at || interaction.created_at || "Unknown date"} | ${interaction.channel || "other"} | ${interaction.direction || "unknown"} | ${interaction.outcome || "No outcome"} | ${interaction.summary || "No summary"} | Next: ${interaction.next_action || "none"} | Due: ${interaction.next_action_date || "none"}`
+                )
+                .join("\n")
+            : "No interaction history.";
+
+        return `ID: ${lead.id}
 Company: ${lead.company || "Not added"}
 Contact: ${lead.name || "Not added"}
 Industry: ${lead.industry || "Not added"}
 Region: ${lead.region || "Not added"}
 Stage: ${lead.stage || "new"}
 Solution: ${lead.solution || "Not decided"}
+Monthly value: £${lead.monthly_value ?? lead.estimated_value ?? 0}
+Priority: ${lead.priority || "not set"}
+Last contacted: ${lead.last_contacted || "not recorded"}
 Next action: ${lead.next_action || "none"}
-Next action date: ${
-            lead.next_action_date ||
-            lead.follow_up_date ||
-            "none"
-          }
-Notes: ${lead.notes || "none"}`
-      )
+Next action date: ${lead.next_action_date || lead.follow_up_date || "none"}
+
+Recent interaction history:
+${interactionText}`;
+      })
       .join("\n\n");
   }
 
   function buildBusinessContext() {
-    const campaignContext = defaultCampaigns
-      .map(
-        (campaign) =>
-          `${campaign.name}
+    const campaignContext =
+      defaultCampaigns
+        .map(
+          (campaign) =>
+            `${campaign.name}
 Type: ${campaign.type}
 Status: ${campaign.status}
-Primary: ${campaign.primary ? "Yes" : "No"}
+Primary: ${
+              campaign.primary
+                ? "Yes"
+                : "No"
+            }
 Market: ${campaign.market}
 Sectors: ${campaign.sectors.join(", ")}
 Products: ${campaign.products.join(", ")}
 Objective: ${campaign.objective}`
-      )
-      .join("\n\n");
+        )
+        .join("\n\n");
 
-    const productContext = products
-      .map(
-        (product) =>
-          `${product.name}
+    const productContext =
+      products
+        .map(
+          (product) =>
+            `${product.name}
 Family: ${product.family}
 Type: ${product.type}
 Markets: ${product.markets.join(", ")}
@@ -549,8 +859,8 @@ Sectors: ${product.sectors.join(", ")}
 Commercial status: ${product.commercialStatus}
 Use cases: ${product.useCases.join(", ")}
 URL: ${product.url}`
-      )
-      .join("\n\n");
+        )
+        .join("\n\n");
 
     const projectContext =
       projects.length > 0
@@ -559,12 +869,8 @@ URL: ${product.url}`
             .map(
               (project) =>
                 `${project.name} |
-Category: ${
-                  project.category || "not set"
-                } |
-Audience: ${
-                  project.audience || "not set"
-                } |
+Category: ${project.category || "not set"} |
+Audience: ${project.audience || "not set"} |
 Status: ${project.status || "not set"} |
 URL: ${project.url || "none"}`
             )
@@ -588,11 +894,7 @@ URL: ${project.url || "none"}`
             .slice(0, 30)
             .map(
               (offer) =>
-                `${offer.name} | ${
-                  offer.price || "not set"
-                } | ${
-                  offer.description || "none"
-                }`
+                `${offer.name} | ${offer.price || "not set"} | ${offer.description || "none"}`
             )
             .join("\n")
         : "No offers currently loaded.";
@@ -614,9 +916,7 @@ URL: ${project.url || "none"}`
             .slice(0, 20)
             .map(
               (thought) =>
-                `${thought.title || "Untitled"}: ${
-                  thought.content
-                }`
+                `${thought.title || "Untitled"}: ${thought.content}`
             )
             .join("\n")
         : "No recent Alfred memory loaded.";
@@ -628,10 +928,13 @@ URL: ${project.url || "none"}`
             .map(
               (message) =>
                 `${
-                  message.role === "user"
+                  message.role ===
+                  "user"
                     ? "Joash"
                     : "Alfred"
-                }: ${message.content}`
+                }: ${
+                  message.content
+                }`
             )
             .join("\n\n")
         : "No earlier conversation.";
@@ -641,6 +944,10 @@ ALFRED V3 OPERATING CONTEXT
 
 Current UK date and time:
 ${currentDateTime}
+
+ROLE
+
+You are Alfred, Mediahubink's Sales, Strategy and Operating Chief of Staff.
 
 United Kingdom is the core commercial market.
 
@@ -654,7 +961,7 @@ PRODUCT AND PROOF-ASSET REGISTRY
 
 ${productContext}
 
-LIVE CRM
+LIVE CRM AND INTERACTION HISTORY
 
 ${buildLeadContext()}
 
@@ -686,15 +993,21 @@ OPERATING RULES
 
 - British English only.
 - No em dashes.
-- Do not invent CRM activity.
+- Do not invent CRM activity, interactions, meetings or responses.
+- Treat stored interaction history as factual activity.
 - Prefer follow-ups and conversations when revenue is the objective.
 - Do not recommend unnecessary building.
 - UK commercial sales and Namibia market entry are separate operating tracks.
 - Give a clear priority when asked what to do next.
+- Use actual contact history when recommending the next channel.
+- If email and LinkedIn have already been attempted, consider whether phone is the stronger unused channel.
+- If a prospect has been contacted repeatedly without engagement, say when nurture or stopping pursuit is more sensible.
 `;
   }
 
-  function parseJsonReply(raw: string) {
+  function parseJsonReply(
+    raw: string
+  ) {
     const cleaned = raw
       .trim()
       .replace(/^```json/i, "")
@@ -705,8 +1018,11 @@ OPERATING RULES
     try {
       return JSON.parse(cleaned);
     } catch {
-      const firstBrace = cleaned.indexOf("{");
-      const lastBrace = cleaned.lastIndexOf("}");
+      const firstBrace =
+        cleaned.indexOf("{");
+
+      const lastBrace =
+        cleaned.lastIndexOf("}");
 
       if (
         firstBrace !== -1 &&
@@ -714,7 +1030,10 @@ OPERATING RULES
       ) {
         try {
           return JSON.parse(
-            cleaned.slice(firstBrace, lastBrace + 1)
+            cleaned.slice(
+              firstBrace,
+              lastBrace + 1
+            )
           );
         } catch {
           return null;
@@ -725,7 +1044,9 @@ OPERATING RULES
     }
   }
 
-  function findLead(search: string) {
+  function findLead(
+    search: string
+  ) {
     const term = search
       .trim()
       .toLowerCase();
@@ -734,13 +1055,25 @@ OPERATING RULES
       return [];
     }
 
-    const exact = leads.filter((lead) => {
-      const company =
-        lead.company?.toLowerCase() || "";
-      const name = lead.name?.toLowerCase() || "";
+    const exact = leads.filter(
+      (lead) => {
+        const company =
+          lead.company
+            ?.trim()
+            .toLowerCase() || "";
 
-      return company === term || name === term;
-    });
+        const name =
+          lead.name
+            ?.trim()
+            .toLowerCase() || "";
+
+        return (
+          (company &&
+            company === term) ||
+          (name && name === term)
+        );
+      }
+    );
 
     if (exact.length > 0) {
       return exact;
@@ -748,29 +1081,82 @@ OPERATING RULES
 
     return leads.filter((lead) => {
       const company =
-        lead.company?.toLowerCase() || "";
-      const name = lead.name?.toLowerCase() || "";
+        lead.company
+          ?.trim()
+          .toLowerCase() || "";
 
-      return (
-        company.includes(term) ||
-        term.includes(company) ||
-        name.includes(term)
+      const name =
+        lead.name
+          ?.trim()
+          .toLowerCase() || "";
+
+      const companyMatch =
+        company &&
+        (company.includes(term) ||
+          term.includes(company));
+
+      const nameMatch =
+        name &&
+        (name.includes(term) ||
+          term.includes(name));
+
+      return Boolean(
+        companyMatch ||
+          nameMatch
       );
     });
   }
 
-  function validateDate(value?: string | null) {
+  function validateDate(
+    value?: string | null
+  ) {
     if (!value) {
       return null;
     }
 
     if (
-      /^\d{4}-\d{2}-\d{2}$/.test(value)
+      /^\d{4}-\d{2}-\d{2}$/.test(
+        value
+      )
     ) {
       return value;
     }
 
     return null;
+  }
+
+  function validateChannel(
+    value?: string | null
+  ) {
+    if (!value) {
+      return "other";
+    }
+
+    const cleaned =
+      value.toLowerCase();
+
+    return validChannels.includes(
+      cleaned
+    )
+      ? cleaned
+      : "other";
+  }
+
+  function validateDirection(
+    value?: string | null
+  ) {
+    if (!value) {
+      return "outbound";
+    }
+
+    const cleaned =
+      value.toLowerCase();
+
+    return validDirections.includes(
+      cleaned
+    )
+      ? cleaned
+      : "outbound";
   }
 
   async function interpretCommand(
@@ -781,7 +1167,7 @@ OPERATING RULES
     setPendingCommand(null);
 
     const commandPrompt = `
-You are Alfred's CRM command interpreter.
+You are Alfred's CRM and interaction-history command interpreter.
 
 Current UK date:
 ${currentDateISO}
@@ -789,7 +1175,7 @@ ${currentDateISO}
 Current UK date and time:
 ${currentDateTime}
 
-CRM RECORDS:
+CRM RECORDS AND RECENT INTERACTIONS:
 
 ${buildLeadContext()}
 
@@ -797,72 +1183,188 @@ USER COMMAND:
 
 ${instruction}
 
-Determine whether this is a request to UPDATE AN EXISTING CRM LEAD.
+Your job is to determine whether the user wants to:
 
-For now, supported changes are only:
+1. record a real interaction with an existing CRM lead
+2. update an existing CRM lead without recording an interaction
+3. do something not yet supported
+
+Examples of interactions:
+
+- "I emailed PHC today."
+- "I called Andy at BizSpace but he didn't answer."
+- "I left Regan a voicemail."
+- "They replied and want more information."
+- "I sent him a LinkedIn message."
+- "We had a meeting and they want a demo."
+- "She called me back."
+- "I sent the proposal this afternoon."
+
+Supported interaction channels:
+
+email
+phone
+linkedin
+whatsapp
+meeting
+demo
+website
+other
+
+Supported directions:
+
+outbound
+inbound
+
+For a real interaction:
+interaction.should_record must be true.
+
+For a pure CRM instruction such as:
+"Set BizSpace next action to phone call Friday"
+interaction.should_record must be false.
+
+Supported CRM changes:
+
 - stage
 - next_action
 - next_action_date
-- activity_note
 
-Do not create records.
-Do not delete records.
-Do not change money values.
-Do not change contact details.
+Use these exact stage values only:
 
-When the user says things such as:
-"I emailed PHC today"
-record that as activity_note.
-
-When the user says:
-"call them Thursday"
-convert Thursday to an exact YYYY-MM-DD date relative to the current UK date.
-
-Use these exact CRM stage values only:
 ${validStages.join(", ")}
+
+DATE RULES
+
+The current UK date is ${currentDateISO}.
+
+Convert relative dates such as:
+today
+tomorrow
+Friday
+next Monday
+in three days
+
+into exact YYYY-MM-DD dates.
+
+If the interaction happened today, set occurred_on to ${currentDateISO}.
+
+If the user explicitly says yesterday or another date, resolve it to an exact YYYY-MM-DD date.
+
+INTERACTION SUMMARY RULE
+
+Write a factual short summary of what happened.
+
+Examples:
+
+"Follow-up email sent."
+"Called Andy Payne. No answer and voicemail left."
+"Inbound reply received requesting more information."
+"Discovery meeting completed. Prospect interested in a demonstration."
+
+Do not embellish.
+
+OUTCOME RULE
+
+Use a short factual outcome where possible, for example:
+
+Sent
+No answer
+Voicemail left
+Replied
+Interested
+Demo requested
+Meeting completed
+Awaiting response
+
+CONTACT RULE
+
+Use the named person when the user says one or when the CRM record clearly supplies the relevant person.
+
+Never invent a contact.
 
 Return ONLY valid JSON.
 
-Return this exact structure:
+Use this exact structure:
 
 {
-  "action": "update_lead",
+  "action": "lead_command",
   "company_search": "company or contact phrase",
-  "summary": "short human-readable description",
+  "summary": "short explanation of what Alfred proposes",
+  "interaction": {
+    "should_record": true,
+    "occurred_on": "YYYY-MM-DD",
+    "contact_name": null,
+    "channel": "phone",
+    "direction": "outbound",
+    "outcome": "Voicemail left",
+    "summary": "Called contact. No answer and voicemail left."
+  },
   "changes": {
     "stage": null,
-    "next_action": null,
-    "next_action_date": null,
-    "activity_note": null
+    "next_action": "Follow up by phone",
+    "next_action_date": "YYYY-MM-DD"
   }
 }
 
-If this is not an existing-lead update, return:
+For a pure CRM update, set:
+
+"should_record": false
+
+and leave interaction fields null.
+
+If the request is unsupported, return:
 
 {
   "action": "none",
   "company_search": "",
   "summary": "This command is not yet supported.",
-  "changes": {}
+  "interaction": {
+    "should_record": false,
+    "occurred_on": null,
+    "contact_name": null,
+    "channel": null,
+    "direction": null,
+    "outcome": null,
+    "summary": null
+  },
+  "changes": {
+    "stage": null,
+    "next_action": null,
+    "next_action_date": null
+  }
 }
 
-Never claim the database has already been updated.
+Never claim anything has already been saved.
+
+Never create a new company.
+
+Never delete anything.
+
+Never alter contact details or financial values.
 `;
 
     try {
-      const response = await fetch("/api/alfred", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: commandPrompt,
-        }),
-      });
+      const response = await fetch(
+        "/api/alfred",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            prompt: commandPrompt,
+          }),
+        }
+      );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
-      if (!response.ok || !data.reply) {
+      if (
+        !response.ok ||
+        !data.reply
+      ) {
         setCommandMessage(
           data.error ||
             "Alfred could not interpret that command."
@@ -870,13 +1372,15 @@ Never claim the database has already been updated.
         return;
       }
 
-      const parsed = parseJsonReply(
-        data.reply
-      ) as ParsedCommand | null;
+      const parsed =
+        parseJsonReply(
+          data.reply
+        ) as ParsedCommand | null;
 
       if (
         !parsed ||
-        parsed.action !== "update_lead"
+        parsed.action !==
+          "lead_command"
       ) {
         setCommandMessage(
           parsed?.summary ||
@@ -889,16 +1393,20 @@ Never claim the database has already been updated.
         parsed.company_search
       );
 
-      if (matches.length === 0) {
+      if (
+        matches.length === 0
+      ) {
         setCommandMessage(
-          `I could not confidently match "${parsed.company_search}" to an existing CRM lead. No changes have been made.`
+          `I could not confidently match "${parsed.company_search}" to an existing CRM lead. Nothing has been changed.`
         );
         return;
       }
 
-      if (matches.length > 1) {
+      if (
+        matches.length > 1
+      ) {
         setCommandMessage(
-          `I found more than one possible CRM match for "${parsed.company_search}". No changes have been made. Please use the full company name.`
+          `I found more than one possible CRM match for "${parsed.company_search}". Nothing has been changed. Please use the full company name.`
         );
         return;
       }
@@ -906,30 +1414,77 @@ Never claim the database has already been updated.
       const lead = matches[0];
 
       const proposedStage =
-        parsed.changes.stage &&
+        parsed.changes?.stage &&
         validStages.includes(
           parsed.changes.stage
         )
-          ? parsed.changes.stage
+          ? parsed.changes
+              .stage
           : null;
 
-      const proposedDate = validateDate(
-        parsed.changes.next_action_date
-      );
+      const proposedDate =
+        validateDate(
+          parsed.changes
+            ?.next_action_date
+        );
+
+      const shouldRecord =
+        parsed.interaction
+          ?.should_record === true;
+
+      const occurredOn =
+        shouldRecord
+          ? validateDate(
+              parsed.interaction
+                ?.occurred_on
+            ) ||
+            currentDateISO
+          : null;
 
       setPendingCommand({
         lead,
-        summary: parsed.summary,
+        summary:
+          parsed.summary ||
+          "Review the proposed update.",
+        shouldRecordInteraction:
+          shouldRecord,
+        occurredOn,
+        contactName:
+          parsed.interaction
+            ?.contact_name ||
+          lead.name ||
+          null,
+        channel: shouldRecord
+          ? validateChannel(
+              parsed.interaction
+                ?.channel
+            )
+          : null,
+        direction: shouldRecord
+          ? validateDirection(
+              parsed.interaction
+                ?.direction
+            )
+          : null,
+        outcome:
+          parsed.interaction
+            ?.outcome || null,
+        interactionSummary:
+          parsed.interaction
+            ?.summary || null,
         stage: proposedStage,
         nextAction:
-          parsed.changes.next_action || null,
-        nextActionDate: proposedDate,
-        activityNote:
-          parsed.changes.activity_note || null,
+          parsed.changes
+            ?.next_action ||
+          null,
+        nextActionDate:
+          proposedDate,
       });
 
       setCommandMessage(
-        "Review the proposed CRM update below. Nothing has been changed yet."
+        shouldRecord
+          ? "Review the proposed interaction and CRM update below. Nothing has been changed yet."
+          : "Review the proposed CRM update below. Nothing has been changed yet."
       );
     } catch {
       setCommandMessage(
@@ -940,10 +1495,151 @@ Never claim the database has already been updated.
     }
   }
 
-  function formatActivityNote(
-    note: string
+  function buildOccurredAt(
+    occurredOn?: string | null
   ) {
-    return `${currentDateISO}: ${note.trim()}`;
+    if (!occurredOn) {
+      return new Date().toISOString();
+    }
+
+    if (
+      occurredOn ===
+      currentDateISO
+    ) {
+      return new Date().toISOString();
+    }
+
+    return `${occurredOn}T12:00:00.000Z`;
+  }
+
+  async function savePureLeadUpdate(
+    pending: PendingLeadCommand
+  ) {
+    const lead =
+      pending.lead;
+
+    const response = await fetch(
+      `/api/leads/${lead.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          name: lead.name,
+          company: lead.company,
+          email: lead.email,
+          phone: lead.phone,
+          industry:
+            lead.industry,
+          source: lead.source,
+          interest:
+            lead.interest,
+          solution:
+            lead.solution ||
+            "Not decided",
+          stage:
+            pending.stage ||
+            lead.stage ||
+            "new",
+          notes:
+            lead.notes,
+          follow_up_date:
+            pending.nextActionDate ??
+            lead.follow_up_date ??
+            lead.next_action_date ??
+            null,
+          estimated_value:
+            lead.estimated_value,
+          monthly_value:
+            lead.monthly_value,
+          score: lead.score,
+          lead_score:
+            lead.lead_score,
+          next_action:
+            pending.nextAction ??
+            lead.next_action ??
+            null,
+          next_action_date:
+            pending.nextActionDate ??
+            lead.next_action_date ??
+            lead.follow_up_date ??
+            null,
+          region: lead.region,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          "The CRM update could not be saved."
+      );
+    }
+
+    return data;
+  }
+
+  async function saveInteraction(
+    pending: PendingLeadCommand
+  ) {
+    const lead =
+      pending.lead;
+
+    const response = await fetch(
+      `/api/leads/${lead.id}/interactions`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          occurred_at:
+            buildOccurredAt(
+              pending.occurredOn
+            ),
+          contact_name:
+            pending.contactName,
+          channel:
+            pending.channel ||
+            "other",
+          direction:
+            pending.direction ||
+            "outbound",
+          outcome:
+            pending.outcome,
+          summary:
+            pending.interactionSummary ||
+            pending.summary,
+          next_action:
+            pending.nextAction,
+          next_action_date:
+            pending.nextActionDate,
+          stage:
+            pending.stage,
+          source:
+            "alfred-command",
+          mark_contacted: true,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          "The interaction could not be saved."
+      );
+    }
+
+    return data;
   }
 
   async function confirmCommand() {
@@ -954,109 +1650,63 @@ Never claim the database has already been updated.
     setCommandSaving(true);
     setCommandMessage("");
 
-    const lead = pendingCommand.lead;
-
-    const newNotes =
-      pendingCommand.activityNote
-        ? [
-            lead.notes?.trim(),
-            formatActivityNote(
-              pendingCommand.activityNote
-            ),
-          ]
-            .filter(Boolean)
-            .join("\n")
-        : lead.notes || "";
-
-    const newStage =
-      pendingCommand.stage ||
-      lead.stage ||
-      "new";
-
-    const newNextAction =
-      pendingCommand.nextAction ??
-      lead.next_action ??
-      "";
-
-    const newNextActionDate =
-      pendingCommand.nextActionDate ??
-      lead.next_action_date ??
-      lead.follow_up_date ??
-      null;
-
     try {
-      const response = await fetch(
-        `/api/leads/${lead.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: lead.name,
-            company: lead.company,
-            email: lead.email,
-            phone: lead.phone,
-            industry: lead.industry,
-            source: lead.source,
-            interest: lead.interest,
-            solution:
-              lead.solution || "Not decided",
-            stage: newStage,
-            notes: newNotes,
-            follow_up_date:
-              newNextActionDate,
-            estimated_value:
-              lead.estimated_value,
-            monthly_value:
-              lead.monthly_value,
-            score: lead.score,
-            lead_score: lead.lead_score,
-            next_action: newNextAction,
-            next_action_date:
-              newNextActionDate,
-            region: lead.region,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setCommandMessage(
-          data.error ||
-            "The CRM update could not be saved."
+      if (
+        pendingCommand
+          .shouldRecordInteraction
+      ) {
+        await saveInteraction(
+          pendingCommand
         );
-        return;
+      } else {
+        await savePureLeadUpdate(
+          pendingCommand
+        );
       }
 
-      const confirmation = `${
-        lead.company ||
-        lead.name ||
-        "CRM record"
-      } updated successfully.`;
+      const label =
+        pendingCommand.lead
+          .company ||
+        pendingCommand.lead
+          .name ||
+        "CRM record";
 
-      setCommandMessage(confirmation);
+      const confirmation =
+        pendingCommand
+          .shouldRecordInteraction
+          ? `${label} interaction recorded and CRM updated successfully.`
+          : `${label} CRM updated successfully.`;
+
+      setCommandMessage(
+        confirmation
+      );
+
+      setMessages(
+        (current) => [
+          ...current,
+          {
+            id: `command-success-${Date.now()}`,
+            role: "assistant",
+            content:
+              confirmation,
+          },
+        ]
+      );
+
       setPendingCommand(null);
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: `command-success-${Date.now()}`,
-          role: "assistant",
-          content: confirmation,
-        },
-      ]);
 
       await loadContext();
 
       if (autoSpeak) {
         speak(confirmation);
       }
-    } catch {
-      setCommandMessage(
-        "Something went wrong while saving the CRM update."
-      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while saving the update.";
+
+      setCommandMessage(message);
     } finally {
       setCommandSaving(false);
     }
@@ -1064,8 +1714,9 @@ Never claim the database has already been updated.
 
   function cancelCommand() {
     setPendingCommand(null);
+
     setCommandMessage(
-      "CRM update cancelled. No changes were made."
+      "Update cancelled. Nothing was changed."
     );
   }
 
@@ -1076,27 +1727,38 @@ Never claim the database has already been updated.
       question ?? prompt
     ).trim();
 
-    if (!actualPrompt || loading) {
+    if (
+      !actualPrompt ||
+      loading
+    ) {
       return;
     }
 
     stopSpeaking();
 
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: actualPrompt,
-    };
+    const userMessage: ChatMessage =
+      {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: actualPrompt,
+      };
 
-    setMessages((current) => [
-      ...current,
-      userMessage,
-    ]);
+    setMessages(
+      (current) => [
+        ...current,
+        userMessage,
+      ]
+    );
 
     setPrompt("");
 
-    if (alfredMode === "command") {
-      await interpretCommand(actualPrompt);
+    if (
+      alfredMode ===
+      "command"
+    ) {
+      await interpretCommand(
+        actualPrompt
+      );
       return;
     }
 
@@ -1112,55 +1774,72 @@ ${actualPrompt}
 Respond as Alfred.
 
 Do not repeat all the loaded context.
-Use it to make a decision, recommendation, briefing or answer.
+
+Use the CRM and interaction history to make a decision, recommendation, briefing or answer.
+
+When discussing a specific company, distinguish between:
+- what the CRM currently says
+- what actually happened in recent interactions
+- what should happen next
+
+Do not invent activity.
 `;
 
     try {
-      const response = await fetch(
-        "/api/alfred",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            prompt: fullPrompt,
-          }),
-        }
-      );
+      const response =
+        await fetch(
+          "/api/alfred",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              prompt: fullPrompt,
+            }),
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       const answer =
         data.reply ||
         data.error ||
         "I could not produce a response.";
 
-      setMessages((current) => [
-        ...current,
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: answer,
-        },
-      ]);
+      setMessages(
+        (current) => [
+          ...current,
+          {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: answer,
+          },
+        ]
+      );
 
-      if (autoSpeak && data.reply) {
+      if (
+        autoSpeak &&
+        data.reply
+      ) {
         setTimeout(() => {
           speak(answer);
         }, 100);
       }
     } catch {
-      setMessages((current) => [
-        ...current,
-        {
-          id: `assistant-error-${Date.now()}`,
-          role: "assistant",
-          content:
-            "Something went wrong while speaking to Alfred.",
-        },
-      ]);
+      setMessages(
+        (current) => [
+          ...current,
+          {
+            id: `assistant-error-${Date.now()}`,
+            role: "assistant",
+            content:
+              "Something went wrong while speaking to Alfred.",
+          },
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -1175,15 +1854,17 @@ Use it to make a decision, recommendation, briefing or answer.
       speechWindow.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setMessages((current) => [
-        ...current,
-        {
-          id: `speech-error-${Date.now()}`,
-          role: "assistant",
-          content:
-            "Speech input is not supported in this browser.",
-        },
-      ]);
+      setMessages(
+        (current) => [
+          ...current,
+          {
+            id: `speech-error-${Date.now()}`,
+            role: "assistant",
+            content:
+              "Speech input is not supported in this browser.",
+          },
+        ]
+      );
 
       return;
     }
@@ -1204,19 +1885,26 @@ Use it to make a decision, recommendation, briefing or answer.
 
       for (
         let i = 0;
-        i < event.results.length;
+        i <
+        event.results.length;
         i++
       ) {
         transcript +=
-          event.results[i][0].transcript;
+          event.results[i][0]
+            .transcript;
       }
 
       const cleanedTranscript =
         transcript.trim();
 
       if (cleanedTranscript) {
-        setPrompt(cleanedTranscript);
-        askAlfred(cleanedTranscript);
+        setPrompt(
+          cleanedTranscript
+        );
+
+        askAlfred(
+          cleanedTranscript
+        );
       }
     };
 
@@ -1251,23 +1939,45 @@ Use it to make a decision, recommendation, briefing or answer.
   ) {
     if (
       event.key === "Enter" &&
-      (event.ctrlKey || event.metaKey)
+      (event.ctrlKey ||
+        event.metaKey)
     ) {
       event.preventDefault();
       askAlfred();
     }
   }
 
+  function leadLabel(
+    leadId: string
+  ) {
+    const lead = leads.find(
+      (item) =>
+        item.id === leadId
+    );
+
+    return (
+      lead?.company ||
+      lead?.name ||
+      "Unknown lead"
+    );
+  }
+
   const primaryCampaign =
     defaultCampaigns.find(
-      (campaign) => campaign.primary
-    ) || defaultCampaigns[0];
+      (campaign) =>
+        campaign.primary
+    ) ||
+    defaultCampaigns[0];
 
   const namibiaCampaign =
     defaultCampaigns.find(
       (campaign) =>
-        campaign.market === "Namibia"
+        campaign.market ===
+        "Namibia"
     );
+
+  const recentInteractions =
+    interactions.slice(0, 12);
 
   return (
     <main className="page">
@@ -1279,8 +1989,9 @@ Use it to make a decision, recommendation, briefing or answer.
             </div>
 
             <div className="logo-subtitle">
-              Mediahubink Sales, Strategy &
-              Operating Chief of Staff
+              Mediahubink Sales,
+              Strategy & Operating
+              Chief of Staff
             </div>
           </div>
 
@@ -1292,61 +2003,100 @@ Use it to make a decision, recommendation, briefing or answer.
         <section className="hero">
           <div className="card">
             <div className="kicker">
-              Alfred Command Centre
+              Alfred Command
+              Centre
             </div>
 
             <h1>
-              What needs your attention now?
+              What needs your
+              attention now?
             </h1>
 
             <p className="lead">
-              Ask Alfred for guidance or switch to
-              Command Mode when you want Alfred to
-              prepare a CRM change.
+              Ask Alfred for
+              guidance or switch
+              to Command Mode to
+              record business
+              activity and update
+              the CRM.
             </p>
 
             <div
               className="mode-grid"
-              style={{ marginTop: "20px" }}
+              style={{
+                marginTop:
+                  "20px",
+              }}
             >
               <div className="mode">
                 <strong>
-                  Primary commercial campaign
+                  Primary
+                  commercial
+                  campaign
                 </strong>
+
                 <span>
-                  {primaryCampaign?.name}
+                  {
+                    primaryCampaign?.name
+                  }
                 </span>
+
                 <span>
-                  {primaryCampaign?.objective}
+                  {
+                    primaryCampaign?.objective
+                  }
                 </span>
               </div>
 
               <div className="mode">
                 <strong>
-                  Strategic market entry
+                  Strategic market
+                  entry
                 </strong>
+
                 <span>
-                  {namibiaCampaign?.name}
+                  {
+                    namibiaCampaign?.name
+                  }
                 </span>
+
                 <span>
-                  {namibiaCampaign?.objective}
+                  {
+                    namibiaCampaign?.objective
+                  }
                 </span>
               </div>
 
               <div className="mode">
-                <strong>Live context</strong>
+                <strong>
+                  Live context
+                </strong>
+
                 <span>
-                  {leads.length} leads ·{" "}
-                  {projects.length} projects ·{" "}
-                  {products.length} registered assets
+                  {leads.length}{" "}
+                  leads ·{" "}
+                  {
+                    interactions.length
+                  }{" "}
+                  interactions ·{" "}
+                  {
+                    projects.length
+                  }{" "}
+                  projects
                 </span>
-                <span>{contextMessage}</span>
+
+                <span>
+                  {contextMessage}
+                </span>
               </div>
             </div>
 
             <div
               className="actions"
-              style={{ marginTop: "20px" }}
+              style={{
+                marginTop:
+                  "20px",
+              }}
             >
               <a
                 className="btn btn-secondary"
@@ -1359,28 +2109,36 @@ Use it to make a decision, recommendation, briefing or answer.
                 className="btn btn-secondary"
                 href="/daily-briefing"
               >
-                Daily Briefing Page
+                Daily Briefing
               </a>
 
               <button
                 className="btn btn-secondary"
-                onClick={loadContext}
-                disabled={contextLoading}
+                onClick={
+                  loadContext
+                }
+                disabled={
+                  contextLoading
+                }
               >
                 {contextLoading
                   ? "Refreshing..."
-                  : "Refresh business context"}
+                  : "Refresh context"}
               </button>
             </div>
 
             <p
               style={{
-                color: "#a3a3a3",
-                marginTop: "14px",
-                fontSize: "14px",
+                color:
+                  "#a3a3a3",
+                marginTop:
+                  "14px",
+                fontSize:
+                  "14px",
               }}
             >
-              UK time: {currentDateTime}
+              UK time:{" "}
+              {currentDateTime}
             </p>
           </div>
 
@@ -1392,20 +2150,29 @@ Use it to make a decision, recommendation, briefing or answer.
             <div
               className="actions"
               style={{
-                marginTop: "14px",
-                marginBottom: "16px",
+                marginTop:
+                  "14px",
+                marginBottom:
+                  "16px",
               }}
             >
               <button
                 className={
-                  alfredMode === "ask"
+                  alfredMode ===
+                  "ask"
                     ? "btn"
                     : "btn btn-secondary"
                 }
                 onClick={() => {
-                  setAlfredMode("ask");
-                  setPendingCommand(null);
-                  setCommandMessage("");
+                  setAlfredMode(
+                    "ask"
+                  );
+                  setPendingCommand(
+                    null
+                  );
+                  setCommandMessage(
+                    ""
+                  );
                 }}
               >
                 Ask Mode
@@ -1413,13 +2180,18 @@ Use it to make a decision, recommendation, briefing or answer.
 
               <button
                 className={
-                  alfredMode === "command"
+                  alfredMode ===
+                  "command"
                     ? "btn"
                     : "btn btn-secondary"
                 }
                 onClick={() => {
-                  setAlfredMode("command");
-                  setCommandMessage("");
+                  setAlfredMode(
+                    "command"
+                  );
+                  setCommandMessage(
+                    ""
+                  );
                 }}
               >
                 Command Mode
@@ -1428,40 +2200,58 @@ Use it to make a decision, recommendation, briefing or answer.
 
             <div className="mode">
               <strong>
-                {alfredMode === "ask"
+                {alfredMode ===
+                "ask"
                   ? "Ask Mode"
                   : "Command Mode"}
               </strong>
 
               <span>
-                {alfredMode === "ask"
-                  ? "Ask for briefings, priorities, analysis and recommendations."
-                  : "Tell Alfred what happened. Alfred will prepare a CRM update and wait for your confirmation."}
+                {alfredMode ===
+                "ask"
+                  ? "Ask for briefings, priorities, company history, analysis and recommendations."
+                  : "Tell Alfred what happened. Alfred will prepare the interaction and CRM changes, then wait for your approval."}
               </span>
             </div>
 
             <textarea
               className="input-box"
-              style={{ marginTop: "16px" }}
+              style={{
+                marginTop:
+                  "16px",
+              }}
               value={prompt}
-              onChange={(event) =>
-                setPrompt(event.target.value)
+              onChange={(
+                event
+              ) =>
+                setPrompt(
+                  event.target
+                    .value
+                )
               }
-              onKeyDown={handleKeyDown}
+              onKeyDown={
+                handleKeyDown
+              }
               placeholder={
-                alfredMode === "ask"
-                  ? "Example: Alfred, give me my briefing and tell me what I should do first."
-                  : "Example: I emailed PHC today. Set the next action to call them tomorrow and move them to Contacted."
+                alfredMode ===
+                "ask"
+                  ? "Example: Alfred, what has happened with BizSpace and what should I do next?"
+                  : "Example: I called Andy at BizSpace. He didn't answer, so I left a voicemail. Follow up Friday."
               }
             />
 
             <div
               className="actions"
-              style={{ marginTop: "16px" }}
+              style={{
+                marginTop:
+                  "16px",
+              }}
             >
               <button
                 className="btn"
-                onClick={() => askAlfred()}
+                onClick={() =>
+                  askAlfred()
+                }
                 disabled={
                   loading ||
                   contextLoading ||
@@ -1470,7 +2260,8 @@ Use it to make a decision, recommendation, briefing or answer.
               >
                 {loading
                   ? "Alfred is working..."
-                  : alfredMode === "command"
+                  : alfredMode ===
+                      "command"
                     ? "Prepare update"
                     : "Ask Alfred"}
               </button>
@@ -1478,41 +2269,54 @@ Use it to make a decision, recommendation, briefing or answer.
               {!isListening ? (
                 <button
                   className="btn btn-secondary"
-                  onClick={startSpeech}
+                  onClick={
+                    startSpeech
+                  }
                   disabled={
                     loading ||
                     contextLoading
                   }
                 >
-                  🎙️ Speak to Alfred
+                  🎙️ Speak to
+                  Alfred
                 </button>
               ) : (
                 <button
                   className="btn btn-secondary"
-                  onClick={stopSpeech}
+                  onClick={
+                    stopSpeech
+                  }
                 >
-                  ⏹ Stop listening
+                  ⏹ Stop
+                  listening
                 </button>
               )}
 
               <button
                 className="btn btn-secondary"
-                onClick={testVoice}
+                onClick={
+                  testVoice
+                }
               >
                 🔊 Test voice
               </button>
 
               <button
                 className="btn btn-secondary"
-                onClick={hearLastReply}
+                onClick={
+                  hearLastReply
+                }
               >
-                ▶️ Hear last reply
+                ▶️ Hear last
+                reply
               </button>
 
               {isSpeaking && (
                 <button
                   className="btn btn-secondary"
-                  onClick={stopSpeaking}
+                  onClick={
+                    stopSpeaking
+                  }
                 >
                   🔇 Stop Alfred
                 </button>
@@ -1521,7 +2325,9 @@ Use it to make a decision, recommendation, briefing or answer.
               <button
                 className="btn btn-secondary"
                 onClick={() =>
-                  setAutoSpeak(!autoSpeak)
+                  setAutoSpeak(
+                    !autoSpeak
+                  )
                 }
               >
                 {autoSpeak
@@ -1531,7 +2337,9 @@ Use it to make a decision, recommendation, briefing or answer.
 
               <button
                 className="btn btn-secondary"
-                onClick={clearConversation}
+                onClick={
+                  clearConversation
+                }
               >
                 Clear
               </button>
@@ -1539,18 +2347,30 @@ Use it to make a decision, recommendation, briefing or answer.
 
             <div
               className="mode"
-              style={{ marginTop: "14px" }}
+              style={{
+                marginTop:
+                  "14px",
+              }}
             >
-              <strong>Voice status</strong>
-              <span>{voiceStatus}</span>
+              <strong>
+                Voice status
+              </strong>
+
+              <span>
+                {voiceStatus}
+              </span>
             </div>
           </div>
         </section>
 
-        {alfredMode === "command" && (
+        {alfredMode ===
+          "command" && (
           <section
             className="card"
-            style={{ marginTop: "28px" }}
+            style={{
+              marginTop:
+                "28px",
+            }}
           >
             <div className="panel-title">
               Command approval
@@ -1559,92 +2379,188 @@ Use it to make a decision, recommendation, briefing or answer.
             {commandMessage && (
               <div
                 className="mode"
-                style={{ marginTop: "16px" }}
+                style={{
+                  marginTop:
+                    "16px",
+                }}
               >
-                <strong>Status</strong>
-                <span>{commandMessage}</span>
+                <strong>
+                  Status
+                </strong>
+
+                <span>
+                  {
+                    commandMessage
+                  }
+                </span>
               </div>
             )}
 
             {!pendingCommand ? (
               <div
                 className="mode"
-                style={{ marginTop: "16px" }}
+                style={{
+                  marginTop:
+                    "16px",
+                }}
               >
                 <strong>
-                  No pending CRM change
+                  No pending
+                  change
                 </strong>
+
                 <span>
-                  Speak or type an instruction above.
+                  Speak or type
+                  an instruction
+                  above.
                 </span>
               </div>
             ) : (
               <div
                 className="mode"
-                style={{ marginTop: "16px" }}
+                style={{
+                  marginTop:
+                    "16px",
+                }}
               >
                 <strong>
-                  Proposed CRM update
+                  {pendingCommand.shouldRecordInteraction
+                    ? "Proposed interaction & CRM update"
+                    : "Proposed CRM update"}
                 </strong>
 
                 <span>
                   Company:{" "}
-                  {pendingCommand.lead.company ||
-                    pendingCommand.lead.name}
+                  {pendingCommand
+                    .lead
+                    .company ||
+                    pendingCommand
+                      .lead.name}
                 </span>
 
                 <span>
-                  {pendingCommand.summary}
+                  {
+                    pendingCommand.summary
+                  }
                 </span>
+
+                {pendingCommand.shouldRecordInteraction && (
+                  <>
+                    <span>
+                      Interaction
+                      date:{" "}
+                      {formatDateOnly(
+                        pendingCommand.occurredOn
+                      )}
+                    </span>
+
+                    <span>
+                      Channel:{" "}
+                      {capitalise(
+                        pendingCommand.channel
+                      )}
+                    </span>
+
+                    <span>
+                      Direction:{" "}
+                      {capitalise(
+                        pendingCommand.direction
+                      )}
+                    </span>
+
+                    {pendingCommand.contactName && (
+                      <span>
+                        Contact:{" "}
+                        {
+                          pendingCommand.contactName
+                        }
+                      </span>
+                    )}
+
+                    {pendingCommand.outcome && (
+                      <span>
+                        Outcome:{" "}
+                        {
+                          pendingCommand.outcome
+                        }
+                      </span>
+                    )}
+
+                    {pendingCommand.interactionSummary && (
+                      <span>
+                        Activity:{" "}
+                        {
+                          pendingCommand.interactionSummary
+                        }
+                      </span>
+                    )}
+                  </>
+                )}
 
                 {pendingCommand.stage && (
                   <span>
                     Stage:{" "}
-                    {pendingCommand.lead.stage ||
-                      "new"}{" "}
-                    → {pendingCommand.stage}
+                    {capitalise(
+                      pendingCommand
+                        .lead.stage ||
+                        "new"
+                    )}{" "}
+                    →{" "}
+                    {capitalise(
+                      pendingCommand.stage
+                    )}
                   </span>
                 )}
 
                 {pendingCommand.nextAction && (
                   <span>
                     Next action:{" "}
-                    {pendingCommand.nextAction}
+                    {
+                      pendingCommand.nextAction
+                    }
                   </span>
                 )}
 
                 {pendingCommand.nextActionDate && (
                   <span>
                     Due:{" "}
-                    {pendingCommand.nextActionDate}
-                  </span>
-                )}
-
-                {pendingCommand.activityNote && (
-                  <span>
-                    Activity note:{" "}
-                    {pendingCommand.activityNote}
+                    {formatDateOnly(
+                      pendingCommand.nextActionDate
+                    )}
                   </span>
                 )}
 
                 <div
                   className="actions"
-                  style={{ marginTop: "16px" }}
+                  style={{
+                    marginTop:
+                      "16px",
+                  }}
                 >
                   <button
                     className="btn"
-                    onClick={confirmCommand}
-                    disabled={commandSaving}
+                    onClick={
+                      confirmCommand
+                    }
+                    disabled={
+                      commandSaving
+                    }
                   >
                     {commandSaving
                       ? "Saving..."
-                      : "Confirm update"}
+                      : pendingCommand.shouldRecordInteraction
+                        ? "Confirm interaction & update"
+                        : "Confirm update"}
                   </button>
 
                   <button
                     className="btn btn-secondary"
-                    onClick={cancelCommand}
-                    disabled={commandSaving}
+                    onClick={
+                      cancelCommand
+                    }
+                    disabled={
+                      commandSaving
+                    }
                   >
                     Cancel
                   </button>
@@ -1654,10 +2570,14 @@ Use it to make a decision, recommendation, briefing or answer.
           </section>
         )}
 
-        {alfredMode === "ask" && (
+        {alfredMode ===
+          "ask" && (
           <section
             className="card"
-            style={{ marginTop: "28px" }}
+            style={{
+              marginTop:
+                "28px",
+            }}
           >
             <div className="panel-title">
               Quick directions
@@ -1665,152 +2585,343 @@ Use it to make a decision, recommendation, briefing or answer.
 
             <div
               className="mode-grid"
-              style={{ marginTop: "18px" }}
+              style={{
+                marginTop:
+                  "18px",
+              }}
             >
-              {quickActions.map((action) => (
-                <button
-                  key={action.label}
-                  className="mode"
-                  style={{
-                    textAlign: "left",
-                    cursor: "pointer",
-                  }}
-                  onClick={() =>
-                    askAlfred(action.prompt)
-                  }
-                  disabled={
-                    loading ||
-                    contextLoading
-                  }
-                >
-                  <strong>
-                    {action.label}
-                  </strong>
-                  <span>
-                    Ask Alfred using live operating
-                    data.
-                  </span>
-                </button>
-              ))}
+              {quickActions.map(
+                (action) => (
+                  <button
+                    key={
+                      action.label
+                    }
+                    className="mode"
+                    style={{
+                      textAlign:
+                        "left",
+                      cursor:
+                        "pointer",
+                    }}
+                    onClick={() =>
+                      askAlfred(
+                        action.prompt
+                      )
+                    }
+                    disabled={
+                      loading ||
+                      contextLoading
+                    }
+                  >
+                    <strong>
+                      {
+                        action.label
+                      }
+                    </strong>
+
+                    <span>
+                      Ask Alfred
+                      using live
+                      operating
+                      data.
+                    </span>
+                  </button>
+                )
+              )}
             </div>
           </section>
         )}
 
         <section
           className="card"
-          style={{ marginTop: "28px" }}
+          style={{
+            marginTop: "28px",
+          }}
         >
           <div className="panel-title">
-            Conversation
+            Recent interactions
           </div>
 
-          {messages.length === 0 ? (
+          {recentInteractions.length ===
+          0 ? (
             <div
               className="mode"
-              style={{ marginTop: "16px" }}
+              style={{
+                marginTop:
+                  "16px",
+              }}
             >
               <strong>
-                Alfred is ready.
+                No interaction
+                history yet
               </strong>
+
               <span>
-                Ask a question or give Alfred a
-                command.
+                Record a call,
+                email, meeting or
+                message through
+                Command Mode.
               </span>
             </div>
           ) : (
-            <div style={{ marginTop: "18px" }}>
-              {messages.map((message) => (
-                <div
-                  className="mode"
-                  key={message.id}
-                  style={{
-                    marginBottom: "14px",
-                  }}
-                >
-                  <strong>
-                    {message.role === "user"
-                      ? "You"
-                      : "Alfred"}
-                  </strong>
+            <div
+              className="mode-grid"
+              style={{
+                marginTop:
+                  "18px",
+              }}
+            >
+              {recentInteractions.map(
+                (
+                  interaction
+                ) => (
+                  <div
+                    className="mode"
+                    key={
+                      interaction.id
+                    }
+                  >
+                    <strong>
+                      {leadLabel(
+                        interaction.lead_id
+                      )}
+                    </strong>
 
-                  {message.role ===
-                  "assistant" ? (
-                    <>
-                      <div className="markdown-output">
-                        <ReactMarkdown>
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
-
-                      <div
-                        className="actions"
-                        style={{
-                          marginTop: "12px",
-                        }}
-                      >
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() =>
-                            speak(
-                              message.content
-                            )
-                          }
-                        >
-                          🔊 Hear Alfred
-                        </button>
-                      </div>
-                    </>
-                  ) : (
                     <span>
-                      {message.content}
+                      {formatDateOnly(
+                        interaction.occurred_at ||
+                          interaction.created_at
+                      )}
                     </span>
-                  )}
-                </div>
-              ))}
+
+                    <span>
+                      {capitalise(
+                        interaction.channel
+                      )}{" "}
+                      ·{" "}
+                      {capitalise(
+                        interaction.direction
+                      )}
+                    </span>
+
+                    {interaction.contact_name && (
+                      <span>
+                        Contact:{" "}
+                        {
+                          interaction.contact_name
+                        }
+                      </span>
+                    )}
+
+                    {interaction.outcome && (
+                      <span>
+                        Outcome:{" "}
+                        {
+                          interaction.outcome
+                        }
+                      </span>
+                    )}
+
+                    <span>
+                      {interaction.summary ||
+                        "No summary"}
+                    </span>
+
+                    {interaction.next_action && (
+                      <span>
+                        Next:{" "}
+                        {
+                          interaction.next_action
+                        }
+                      </span>
+                    )}
+
+                    {interaction.next_action_date && (
+                      <span>
+                        Due:{" "}
+                        {formatDateOnly(
+                          interaction.next_action_date
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )
+              )}
             </div>
           )}
         </section>
 
         <section
           className="card"
-          style={{ marginTop: "28px" }}
+          style={{
+            marginTop: "28px",
+          }}
         >
           <div className="panel-title">
-            What Alfred currently knows
+            Conversation
+          </div>
+
+          {messages.length ===
+          0 ? (
+            <div
+              className="mode"
+              style={{
+                marginTop:
+                  "16px",
+              }}
+            >
+              <strong>
+                Alfred is ready.
+              </strong>
+
+              <span>
+                Ask a question or
+                give Alfred a
+                command.
+              </span>
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop:
+                  "18px",
+              }}
+            >
+              {messages.map(
+                (message) => (
+                  <div
+                    className="mode"
+                    key={message.id}
+                    style={{
+                      marginBottom:
+                        "14px",
+                    }}
+                  >
+                    <strong>
+                      {message.role ===
+                      "user"
+                        ? "You"
+                        : "Alfred"}
+                    </strong>
+
+                    {message.role ===
+                    "assistant" ? (
+                      <>
+                        <div className="markdown-output">
+                          <ReactMarkdown>
+                            {
+                              message.content
+                            }
+                          </ReactMarkdown>
+                        </div>
+
+                        <div
+                          className="actions"
+                          style={{
+                            marginTop:
+                              "12px",
+                          }}
+                        >
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() =>
+                              speak(
+                                message.content
+                              )
+                            }
+                          >
+                            🔊 Hear
+                            Alfred
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <span>
+                        {
+                          message.content
+                        }
+                      </span>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </section>
+
+        <section
+          className="card"
+          style={{
+            marginTop: "28px",
+          }}
+        >
+          <div className="panel-title">
+            What Alfred currently
+            knows
           </div>
 
           <div
             className="section"
-            style={{ marginTop: "18px" }}
+            style={{
+              marginTop:
+                "18px",
+            }}
           >
             <div className="mini-card">
-              <h3>CRM leads</h3>
-              <p>{leads.length}</p>
+              <h3>
+                CRM leads
+              </h3>
+              <p>
+                {leads.length}
+              </p>
             </div>
 
             <div className="mini-card">
-              <h3>Projects</h3>
-              <p>{projects.length}</p>
+              <h3>
+                Interactions
+              </h3>
+              <p>
+                {
+                  interactions.length
+                }
+              </p>
             </div>
 
             <div className="mini-card">
-              <h3>Demos</h3>
-              <p>{demos.length}</p>
+              <h3>
+                Projects
+              </h3>
+              <p>
+                {projects.length}
+              </p>
             </div>
 
             <div className="mini-card">
-              <h3>Offers</h3>
-              <p>{offers.length}</p>
+              <h3>
+                Demos
+              </h3>
+              <p>
+                {demos.length}
+              </p>
             </div>
 
             <div className="mini-card">
-              <h3>Knowledge</h3>
-              <p>{knowledge.length}</p>
+              <h3>
+                Offers
+              </h3>
+              <p>
+                {offers.length}
+              </p>
             </div>
 
             <div className="mini-card">
-              <h3>Memory</h3>
-              <p>{thoughts.length}</p>
+              <h3>
+                Registered
+                assets
+              </h3>
+              <p>
+                {products.length}
+              </p>
             </div>
           </div>
         </section>
