@@ -122,6 +122,7 @@ type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  spokenContent?: string;
 };
 
 type AlfredMode = "ask" | "command";
@@ -816,6 +817,105 @@ export default function AlfredCommandCentrePage() {
     return `${shortened}...`;
   }
 
+  function buildFallbackSpokenReply(
+    text: string
+  ) {
+    const cleaned =
+      cleanForSpeech(text);
+
+    if (!cleaned) {
+      return "";
+    }
+
+    const withoutDraft =
+      cleaned
+        .split(
+          /(?:subject:|email draft:|draft email:)/i
+        )[0]
+        .trim();
+
+    const source =
+      withoutDraft || cleaned;
+
+    const sentences =
+      source.match(
+        /[^.!?]+[.!?]+|[^.!?]+$/g
+      ) || [source];
+
+    let spoken = "";
+
+    for (const sentence of sentences) {
+      const candidate =
+        `${spoken} ${sentence}`
+          .replace(/\s{2,}/g, " ")
+          .trim();
+
+      if (
+        candidate.length > 420 &&
+        spoken
+      ) {
+        break;
+      }
+
+      spoken = candidate;
+
+      if (
+        spoken.length >= 180 ||
+        spoken.split(/\s+/).length >= 48
+      ) {
+        break;
+      }
+    }
+
+    if (!spoken) {
+      spoken = source.slice(0, 420);
+    }
+
+    return spoken.trim();
+  }
+
+  function parseAlfredVoiceReply(
+    raw: string
+  ) {
+    const voiceMatch = raw.match(
+      /\[\[VOICE\]\]([\s\S]*?)\[\[\/VOICE\]\]/i
+    );
+
+    const answerMatch = raw.match(
+      /\[\[ANSWER\]\]([\s\S]*?)\[\[\/ANSWER\]\]/i
+    );
+
+    const written =
+      answerMatch?.[1]?.trim() ||
+      raw
+        .replace(
+          /\[\[VOICE\]\][\s\S]*?\[\[\/VOICE\]\]/gi,
+          ""
+        )
+        .replace(
+          /\[\[\/?ANSWER\]\]/gi,
+          ""
+        )
+        .trim();
+
+    const spoken =
+      voiceMatch?.[1]?.trim() ||
+      buildFallbackSpokenReply(
+        written
+      );
+
+    return {
+      written:
+        written ||
+        "I could not produce a response.",
+      spoken:
+        spoken ||
+        buildFallbackSpokenReply(
+          written
+        ),
+    };
+  }
+
   function getVoiceIntro() {
     if (typeof window === "undefined") {
       return {
@@ -1298,12 +1398,12 @@ export default function AlfredCommandCentrePage() {
     if (
       assistantMessages.length === 0
     ) {
-      return "";
+      return null;
     }
 
     return assistantMessages[
       assistantMessages.length - 1
-    ].content;
+    ];
   }
 
   async function hearLastReply() {
@@ -1318,7 +1418,10 @@ export default function AlfredCommandCentrePage() {
     }
 
     await unlockNaturalVoice();
-    await speak(reply);
+    await speak(
+      reply.spokenContent ||
+      reply.content
+    );
   }
 
   function interactionsForLead(
@@ -2342,6 +2445,31 @@ ${getBedtimePromptRule()}
 
 Do not start the written response with Good morning, Good afternoon, Good evening or Good night. The voice layer handles the personal greeting.
 
+VOICE RESPONSE FORMAT
+
+Return every Ask Mode answer in exactly this structure:
+
+[[VOICE]]
+A short spoken reply for Alfred Natural.
+[[/VOICE]]
+
+[[ANSWER]]
+The full useful written answer.
+[[/ANSWER]]
+
+VOICE RULES
+
+- The VOICE section must normally be 1 to 3 short conversational sentences.
+- Keep the VOICE section to a maximum of about 55 words.
+- Lead with the decision, recommendation or answer.
+- Include the single next action when one exists.
+- Do not read email drafts, long lists, URLs, detailed evidence or lengthy reasoning aloud.
+- If the written answer contains a draft message or email, briefly say that the draft is on screen instead of reading it.
+- Make the spoken reply sound like a calm chief of staff speaking naturally, not like a report being read.
+- If the bedtime guardrail is active, the VOICE section must prioritise the stop-work instruction.
+- The ANSWER section should contain the complete written answer in normal Markdown.
+- Do not put the personal greeting in either section. The voice layer handles it.
+
 Do not invent activity.
 `;
 
@@ -2364,10 +2492,15 @@ Do not invent activity.
       const data =
         await response.json();
 
-      const answer =
+      const rawAnswer =
         data.reply ||
         data.error ||
         "I could not produce a response.";
+
+      const parsedAnswer =
+        parseAlfredVoiceReply(
+          rawAnswer
+        );
 
       setMessages(
         (current) => [
@@ -2375,7 +2508,10 @@ Do not invent activity.
           {
             id: `assistant-${Date.now()}`,
             role: "assistant",
-            content: answer,
+            content:
+              parsedAnswer.written,
+            spokenContent:
+              parsedAnswer.spoken,
           },
         ]
       );
@@ -2385,7 +2521,9 @@ Do not invent activity.
         data.reply
       ) {
         setTimeout(() => {
-          speak(answer);
+          speak(
+            parsedAnswer.spoken
+          );
         }, 100);
       }
     } catch {
@@ -3248,6 +3386,25 @@ Do not invent activity.
               }}
             >
               <strong>
+                Spoken replies
+              </strong>
+
+              <span>
+                Alfred now speaks the
+                short decision and
+                next action. Full
+                detail stays on screen.
+              </span>
+            </div>
+
+            <div
+              className="mode"
+              style={{
+                marginTop:
+                  "14px",
+              }}
+            >
+              <strong>
                 Voice status
               </strong>
 
@@ -3725,7 +3882,8 @@ Do not invent activity.
                             className="btn btn-secondary"
                             onClick={() =>
                               speak(
-                                message.content
+                                message.spokenContent ||
+                                  message.content
                               )
                             }
                           >
