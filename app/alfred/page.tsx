@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { defaultCampaigns, products } from "../../lib/alfredConfig";
 
@@ -126,6 +126,10 @@ type ChatMessage = {
 
 type AlfredMode = "ask" | "command";
 
+type VoiceMode = "natural" | "device" | "silent";
+
+type BedtimeMode = "normal" | "wind-down" | "stop";
+
 type ParsedCommand = {
   action: "lead_command" | "none";
   company_search: string;
@@ -237,7 +241,7 @@ Prioritise real conversations over generic prospecting.`,
   },
   {
     label: "Tonight's plan",
-    prompt: `Build my practical work plan for tonight from 7:30 pm to 11:30 pm UK time.
+    prompt: `Build my practical work plan for tonight from 7:30 pm, with focused work ending by 10:30 pm UK time so I can wind down and stop for bed between 10:30 pm and 11:00 pm.
 
 Use my live Alfred data and interaction history.
 
@@ -391,6 +395,103 @@ function capitalise(value?: string | null) {
     .join(" ");
 }
 
+function getLondonClockParts() {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      timeZone: "Europe/London",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }
+  ).formatToParts(now);
+
+  const value = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
+
+  const year = value("year");
+  const month = value("month");
+  const day = value("day");
+  const hour = Number(value("hour"));
+  const minute = Number(value("minute"));
+
+  return {
+    hour,
+    minute,
+    dateISO: `${year}-${month}-${day}`,
+  };
+}
+
+function getGreetingText(hour: number) {
+  if (hour >= 5 && hour < 12) {
+    return "Good morning, Joash.";
+  }
+
+  if (hour >= 12 && hour < 17) {
+    return "Good afternoon, Joash.";
+  }
+
+  if (hour >= 17 && hour < 22) {
+    return "Good evening, Joash.";
+  }
+
+  return "Good night, Joash.";
+}
+
+function getBedtimeMode(
+  hour: number,
+  minute: number
+): BedtimeMode {
+  if (hour === 22 && minute >= 30) {
+    return "wind-down";
+  }
+
+  if (hour >= 23 || hour < 5) {
+    return "stop";
+  }
+
+  return "normal";
+}
+
+function getBedtimeReminder(
+  mode: BedtimeMode
+) {
+  if (mode === "wind-down") {
+    return "It is time to stop for tonight, save your work and get ready for bed.";
+  }
+
+  if (mode === "stop") {
+    return "It is past your cut-off. That is enough for tonight. Save your work and go to bed. We can pick this up tomorrow.";
+  }
+
+  return "";
+}
+
+function getBedtimePromptRule() {
+  const { hour, minute } =
+    getLondonClockParts();
+
+  const mode = getBedtimeMode(
+    hour,
+    minute
+  );
+
+  if (mode === "wind-down") {
+    return `It is between 22:30 and 23:00 UK time. Remind Joash clearly to stop working and go to bed. Do not give him a new evening work block. You may help him finish a tiny action, record a CRM interaction, capture an idea, or state the first task for tomorrow.`;
+  }
+
+  if (mode === "stop") {
+    return `It is after Joash's nightly cut-off. Be firm but warm: tell him to stop working and go to bed. Do not encourage a new project, build, research session or extended task. Only help with something genuinely urgent, a quick capture, or a short CRM update. Otherwise state the first task for tomorrow and stop.`;
+  }
+
+  return `Normal operating hours. If planning tonight, schedule focused work to finish by 22:30 UK time so Joash can wind down and go to bed.`;
+}
+
 export default function AlfredCommandCentrePage() {
   const [prompt, setPrompt] =
     useState("");
@@ -453,11 +554,20 @@ export default function AlfredCommandCentrePage() {
   const [autoSpeak, setAutoSpeak] =
     useState(true);
 
+  const [voiceMode, setVoiceMode] =
+    useState<VoiceMode>("natural");
+
+  const naturalAudioRef =
+    useRef<HTMLAudioElement | null>(null);
+
+  const naturalAudioUrlRef =
+    useRef<string>("");
+
   const [isSpeaking, setIsSpeaking] =
     useState(false);
 
   const [voiceStatus, setVoiceStatus] =
-    useState("Voice ready.");
+    useState("Alfred Natural ready.");
 
   const [
     pendingCommand,
@@ -477,11 +587,14 @@ export default function AlfredCommandCentrePage() {
     setCommandMessage,
   ] = useState("");
 
+  const [currentNow, setCurrentNow] =
+    useState(() => new Date());
+
   const currentDateISO =
     getLondonDateISO();
 
   const currentDateTime =
-    new Date().toLocaleString("en-GB", {
+    currentNow.toLocaleString("en-GB", {
       timeZone: "Europe/London",
       weekday: "long",
       day: "2-digit",
@@ -617,6 +730,33 @@ export default function AlfredCommandCentrePage() {
     loadContext();
   }, []);
 
+  useEffect(() => {
+    const saved = window.localStorage.getItem(
+      "alfred_voice_mode"
+    );
+
+    if (
+      saved === "natural" ||
+      saved === "device" ||
+      saved === "silent"
+    ) {
+      setVoiceMode(saved);
+
+      if (saved === "silent") {
+        setAutoSpeak(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentNow(new Date());
+    }, 30000);
+
+    return () =>
+      window.clearInterval(timer);
+  }, []);
+
   function cleanForSpeech(
     text: string
   ) {
@@ -633,29 +773,161 @@ export default function AlfredCommandCentrePage() {
       .trim();
   }
 
-  function speak(text: string) {
-    if (
-      typeof window === "undefined"
-    ) {
+  function trimSpeechText(text: string) {
+    const cleaned = cleanForSpeech(text);
+
+    if (cleaned.length <= 4500) {
+      return cleaned;
+    }
+
+    const shortened = cleaned.slice(0, 4500);
+    const lastStop = Math.max(
+      shortened.lastIndexOf(". "),
+      shortened.lastIndexOf("! "),
+      shortened.lastIndexOf("? ")
+    );
+
+    if (lastStop > 3200) {
+      return shortened.slice(0, lastStop + 1);
+    }
+
+    return `${shortened}...`;
+  }
+
+  function getVoiceIntro() {
+    if (typeof window === "undefined") {
+      return {
+        text: "",
+        greetingPending: false,
+        bedtimePending: false,
+        bedtimeKey: "",
+      };
+    }
+
+    const { hour, minute, dateISO } =
+      getLondonClockParts();
+
+    const greetingPending =
+      window.sessionStorage.getItem(
+        "alfred_greeting_spoken"
+      ) !== "yes";
+
+    const bedtimeMode = getBedtimeMode(
+      hour,
+      minute
+    );
+
+    const bedtimeKey =
+      `alfred_bedtime_${dateISO}`;
+
+    const bedtimePending =
+      bedtimeMode !== "normal" &&
+      window.sessionStorage.getItem(
+        bedtimeKey
+      ) !== "yes";
+
+    const parts: string[] = [];
+
+    if (greetingPending) {
+      parts.push(
+        getGreetingText(hour)
+      );
+    }
+
+    if (bedtimePending) {
+      parts.push(
+        getBedtimeReminder(
+          bedtimeMode
+        )
+      );
+    }
+
+    return {
+      text: parts.join(" "),
+      greetingPending,
+      bedtimePending,
+      bedtimeKey,
+    };
+  }
+
+  function markVoiceIntroSpoken(
+    intro: ReturnType<typeof getVoiceIntro>
+  ) {
+    if (typeof window === "undefined") {
       return;
     }
 
+    if (intro.greetingPending) {
+      window.sessionStorage.setItem(
+        "alfred_greeting_spoken",
+        "yes"
+      );
+    }
+
     if (
-      !(
-        "speechSynthesis" in
-        window
-      )
+      intro.bedtimePending &&
+      intro.bedtimeKey
     ) {
+      window.sessionStorage.setItem(
+        intro.bedtimeKey,
+        "yes"
+      );
+    }
+  }
+
+  function buildSpokenText(
+    text: string,
+    intro: ReturnType<typeof getVoiceIntro>
+  ) {
+    const body = trimSpeechText(text);
+
+    if (!intro.text) {
+      return body;
+    }
+
+    return trimSpeechText(
+      `${intro.text} ${body}`
+    );
+  }
+
+  function releaseNaturalAudio() {
+    if (naturalAudioRef.current) {
+      naturalAudioRef.current.pause();
+      naturalAudioRef.current = null;
+    }
+
+    if (naturalAudioUrlRef.current) {
+      URL.revokeObjectURL(
+        naturalAudioUrlRef.current
+      );
+      naturalAudioUrlRef.current = "";
+    }
+  }
+
+  function deviceSpeak(
+    text: string,
+    introOverride?: ReturnType<typeof getVoiceIntro>
+  ) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!("speechSynthesis" in window)) {
       setVoiceStatus(
-        "Spoken replies are not supported by this browser."
+        "Device voice is not supported by this browser."
       );
       return;
     }
 
-    const cleanedText =
-      cleanForSpeech(text);
+    const intro =
+      introOverride || getVoiceIntro();
 
-    if (!cleanedText) {
+    const spokenText = buildSpokenText(
+      text,
+      intro
+    );
+
+    if (!spokenText) {
       setVoiceStatus(
         "There is nothing to read aloud."
       );
@@ -667,11 +939,11 @@ export default function AlfredCommandCentrePage() {
 
     const utterance =
       new SpeechSynthesisUtterance(
-        cleanedText
+        spokenText
       );
 
     utterance.lang = "en-GB";
-    utterance.rate = 0.96;
+    utterance.rate = 1.05;
     utterance.pitch = 1;
     utterance.volume = 1;
 
@@ -691,28 +963,30 @@ export default function AlfredCommandCentrePage() {
       );
 
     if (britishVoice) {
-      utterance.voice =
-        britishVoice;
+      utterance.voice = britishVoice;
     }
 
     utterance.onstart = () => {
+      markVoiceIntroSpoken(intro);
       setIsSpeaking(true);
       setVoiceStatus(
-        "Alfred is speaking..."
+        "Alfred is speaking with the device voice..."
       );
     };
 
     utterance.onend = () => {
       setIsSpeaking(false);
       setVoiceStatus(
-        "Voice ready."
+        voiceMode === "natural"
+          ? "Alfred Natural ready."
+          : "Device voice ready."
       );
     };
 
     utterance.onerror = () => {
       setIsSpeaking(false);
       setVoiceStatus(
-        "Automatic playback was blocked. Tap Hear Alfred on the reply."
+        "Playback was blocked. Tap Hear Alfred on the reply."
       );
     };
 
@@ -721,13 +995,166 @@ export default function AlfredCommandCentrePage() {
     );
   }
 
-  function testVoice() {
-    speak(
-      "Alfred is ready. If you can hear this, spoken replies are working."
+  async function naturalSpeak(
+    text: string
+  ) {
+    const intro = getVoiceIntro();
+    const spokenText = buildSpokenText(
+      text,
+      intro
+    );
+
+    if (!spokenText) {
+      setVoiceStatus(
+        "There is nothing to read aloud."
+      );
+      return;
+    }
+
+    releaseNaturalAudio();
+
+    if (
+      typeof window !== "undefined" &&
+      "speechSynthesis" in window
+    ) {
+      window.speechSynthesis.cancel();
+    }
+
+    setVoiceStatus(
+      "Preparing Alfred Natural..."
+    );
+
+    try {
+      const response = await fetch(
+        "/api/voice",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            text: spokenText,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Natural voice generation failed."
+        );
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      audio.preload = "auto";
+      audio.playsInline = true;
+
+      naturalAudioRef.current = audio;
+      naturalAudioUrlRef.current = url;
+
+      audio.onplay = () => {
+        markVoiceIntroSpoken(intro);
+        setIsSpeaking(true);
+        setVoiceStatus(
+          "Alfred Natural is speaking..."
+        );
+      };
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setVoiceStatus(
+          "Alfred Natural ready."
+        );
+        releaseNaturalAudio();
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        setVoiceStatus(
+          "Natural voice playback failed. Using device voice."
+        );
+        releaseNaturalAudio();
+        deviceSpeak(text, intro);
+      };
+
+      try {
+        await audio.play();
+      } catch {
+        setIsSpeaking(false);
+        setVoiceStatus(
+          "Alfred Natural is ready. Tap Hear Alfred if iPhone blocks automatic playback."
+        );
+      }
+    } catch {
+      setVoiceStatus(
+        "Alfred Natural is unavailable. Using device voice."
+      );
+      deviceSpeak(text, intro);
+    }
+  }
+
+  async function speak(text: string) {
+    if (voiceMode === "silent") {
+      setVoiceStatus(
+        "Silent mode is on."
+      );
+      return;
+    }
+
+    if (voiceMode === "device") {
+      deviceSpeak(text);
+      return;
+    }
+
+    await naturalSpeak(text);
+  }
+
+  function chooseVoiceMode(
+    mode: VoiceMode
+  ) {
+    stopSpeaking();
+    setVoiceMode(mode);
+
+    window.localStorage.setItem(
+      "alfred_voice_mode",
+      mode
+    );
+
+    if (mode === "silent") {
+      setAutoSpeak(false);
+      setVoiceStatus(
+        "Silent mode is on."
+      );
+      return;
+    }
+
+    setAutoSpeak(true);
+    setVoiceStatus(
+      mode === "natural"
+        ? "Alfred Natural ready."
+        : "Device voice ready."
+    );
+  }
+
+  async function testVoice() {
+    if (voiceMode === "silent") {
+      setVoiceStatus(
+        "Select Alfred Natural or Device Voice to test speech."
+      );
+      return;
+    }
+
+    await speak(
+      "Alfred is ready. Voice, memory and command systems are available."
     );
   }
 
   function stopSpeaking() {
+    releaseNaturalAudio();
+
     if (
       typeof window !== "undefined" &&
       "speechSynthesis" in window
@@ -737,7 +1164,11 @@ export default function AlfredCommandCentrePage() {
 
     setIsSpeaking(false);
     setVoiceStatus(
-      "Voice stopped."
+      voiceMode === "natural"
+        ? "Alfred Natural ready."
+        : voiceMode === "device"
+          ? "Device voice ready."
+          : "Silent mode is on."
     );
   }
 
@@ -759,7 +1190,7 @@ export default function AlfredCommandCentrePage() {
     ].content;
   }
 
-  function hearLastReply() {
+  async function hearLastReply() {
     const reply =
       getLastAssistantReply();
 
@@ -770,7 +1201,7 @@ export default function AlfredCommandCentrePage() {
       return;
     }
 
-    speak(reply);
+    await speak(reply);
   }
 
   function interactionsForLead(
@@ -1002,6 +1433,11 @@ OPERATING RULES
 - Use actual contact history when recommending the next channel.
 - If email and LinkedIn have already been attempted, consider whether phone is the stronger unused channel.
 - If a prospect has been contacted repeatedly without engagement, say when nurture or stopping pursuit is more sensible.
+- Do not put a time-of-day greeting in the written answer. The voice layer handles the personal greeting once per session.
+
+TIME AND BEDTIME RULE
+
+${getBedtimePromptRule()}
 `;
   }
 
@@ -1782,6 +2218,11 @@ When discussing a specific company, distinguish between:
 - what actually happened in recent interactions
 - what should happen next
 
+TIME GUARDRAIL
+${getBedtimePromptRule()}
+
+Do not start the written response with Good morning, Good afternoon, Good evening or Good night. The voice layer handles the personal greeting.
+
 Do not invent activity.
 `;
 
@@ -1979,6 +2420,15 @@ Do not invent activity.
   const recentInteractions =
     interactions.slice(0, 12);
 
+  const londonClock =
+    getLondonClockParts();
+
+  const bedtimeMode =
+    getBedtimeMode(
+      londonClock.hour,
+      londonClock.minute
+    );
+
   return (
     <main className="page">
       <div className="shell">
@@ -1999,6 +2449,41 @@ Do not invent activity.
             Command Centre V3
           </div>
         </nav>
+
+        {bedtimeMode !== "normal" && (
+          <section
+            className="card"
+            style={{
+              marginBottom: "28px",
+              borderColor:
+                "rgba(255, 184, 77, 0.28)",
+            }}
+          >
+            <div className="kicker">
+              Alfred bedtime reminder
+            </div>
+
+            <h2
+              style={{
+                marginTop: "8px",
+                marginBottom: "8px",
+              }}
+            >
+              {bedtimeMode === "wind-down"
+                ? "Time to stop for tonight."
+                : "That is enough for tonight."}
+            </h2>
+
+            <p
+              className="lead"
+              style={{ marginBottom: 0 }}
+            >
+              {getBedtimeReminder(
+                bedtimeMode
+              )}
+            </p>
+          </section>
+        )}
 
         <section className="hero">
           <div className="card">
@@ -2331,8 +2816,8 @@ Do not invent activity.
                 }
               >
                 {autoSpeak
-                  ? "🔊 Auto voice on"
-                  : "🔈 Auto voice off"}
+                  ? "🔊 Auto replies on"
+                  : "🔈 Auto replies off"}
               </button>
 
               <button
@@ -2353,11 +2838,94 @@ Do not invent activity.
               }}
             >
               <strong>
+                Alfred voice
+              </strong>
+
+              <span>
+                {voiceMode === "natural"
+                  ? "Alfred Natural · ElevenLabs · default"
+                  : voiceMode === "device"
+                    ? "Device Voice · fallback"
+                    : "Silent · no spoken replies"}
+              </span>
+
+              <div
+                className="actions"
+                style={{
+                  marginTop: "12px",
+                }}
+              >
+                <button
+                  className={
+                    voiceMode === "natural"
+                      ? "btn"
+                      : "btn btn-secondary"
+                  }
+                  onClick={() =>
+                    chooseVoiceMode(
+                      "natural"
+                    )
+                  }
+                >
+                  Alfred Natural
+                </button>
+
+                <button
+                  className={
+                    voiceMode === "device"
+                      ? "btn"
+                      : "btn btn-secondary"
+                  }
+                  onClick={() =>
+                    chooseVoiceMode(
+                      "device"
+                    )
+                  }
+                >
+                  Device Voice
+                </button>
+
+                <button
+                  className={
+                    voiceMode === "silent"
+                      ? "btn"
+                      : "btn btn-secondary"
+                  }
+                  onClick={() =>
+                    chooseVoiceMode(
+                      "silent"
+                    )
+                  }
+                >
+                  Silent
+                </button>
+
+                <a
+                  className="btn btn-secondary"
+                  href="/voice-lab"
+                >
+                  Voice Lab
+                </a>
+              </div>
+            </div>
+
+            <div
+              className="mode"
+              style={{
+                marginTop:
+                  "14px",
+              }}
+            >
+              <strong>
                 Voice status
               </strong>
 
               <span>
                 {voiceStatus}
+              </span>
+
+              <span>
+                Alfred greets you once per session using UK time. From 22:30 he will tell you to stop and get ready for bed, and after 23:00 he will discourage further work unless it is genuinely urgent.
               </span>
             </div>
           </div>
