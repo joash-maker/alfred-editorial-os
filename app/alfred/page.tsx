@@ -551,6 +551,20 @@ export default function AlfredCommandCentrePage() {
       null
     );
 
+  const recognitionRef =
+    useRef<SpeechRecognitionType | null>(
+      null
+    );
+
+  const heldTranscriptRef =
+    useRef("");
+
+  const holdActiveRef =
+    useRef(false);
+
+  const speechSubmittedRef =
+    useRef(false);
+
   const [autoSpeak, setAutoSpeak] =
     useState(true);
 
@@ -2391,7 +2405,41 @@ Do not invent activity.
     }
   }
 
+  function submitHeldSpeech() {
+    if (speechSubmittedRef.current) {
+      return;
+    }
+
+    const cleanedTranscript =
+      heldTranscriptRef.current
+        .replace(/\s{2,}/g, " ")
+        .trim();
+
+    if (!cleanedTranscript) {
+      setVoiceStatus(
+        "I didn't catch that. Press and hold the microphone while you speak."
+      );
+      return;
+    }
+
+    speechSubmittedRef.current = true;
+
+    setPrompt(cleanedTranscript);
+
+    void askAlfred(
+      cleanedTranscript
+    );
+  }
+
   function startSpeech() {
+    if (
+      loading ||
+      contextLoading ||
+      isListening
+    ) {
+      return;
+    }
+
     void unlockNaturalVoice();
 
     const speechWindow =
@@ -2419,10 +2467,14 @@ Do not invent activity.
 
     stopSpeaking();
 
+    heldTranscriptRef.current = "";
+    speechSubmittedRef.current = false;
+    holdActiveRef.current = true;
+
     const speech =
       new SpeechRecognition();
 
-    speech.continuous = false;
+    speech.continuous = true;
     speech.interimResults = false;
     speech.lang = "en-GB";
 
@@ -2438,19 +2490,19 @@ Do not invent activity.
         i++
       ) {
         transcript +=
-          event.results[i][0]
-            .transcript;
+          `${event.results[i][0].transcript} `;
       }
 
       const cleanedTranscript =
-        transcript.trim();
+        transcript
+          .replace(/\s{2,}/g, " ")
+          .trim();
+
+      heldTranscriptRef.current =
+        cleanedTranscript;
 
       if (cleanedTranscript) {
         setPrompt(
-          cleanedTranscript
-        );
-
-        askAlfred(
           cleanedTranscript
         );
       }
@@ -2458,23 +2510,153 @@ Do not invent activity.
 
     speech.onerror = () => {
       setIsListening(false);
+      recognitionRef.current = null;
+      setRecognition(null);
+
+      if (!holdActiveRef.current) {
+        submitHeldSpeech();
+      }
     };
 
     speech.onend = () => {
       setIsListening(false);
+      recognitionRef.current = null;
+      setRecognition(null);
+
+      if (!holdActiveRef.current) {
+        submitHeldSpeech();
+      }
     };
 
+    recognitionRef.current = speech;
     setRecognition(speech);
     setIsListening(true);
-    speech.start();
+
+    setVoiceStatus(
+      "Listening. Keep holding, then release to send."
+    );
+
+    try {
+      speech.start();
+    } catch {
+      holdActiveRef.current = false;
+      setIsListening(false);
+      recognitionRef.current = null;
+      setRecognition(null);
+      setVoiceStatus(
+        "The microphone could not start. Try pressing and holding again."
+      );
+    }
   }
 
   function stopSpeech() {
-    recognition?.stop();
+    holdActiveRef.current = false;
+
+    const activeRecognition =
+      recognitionRef.current ||
+      recognition;
+
+    if (activeRecognition) {
+      try {
+        activeRecognition.stop();
+      } catch {
+        submitHeldSpeech();
+      }
+    } else {
+      setTimeout(() => {
+        submitHeldSpeech();
+      }, 50);
+    }
+
     setIsListening(false);
+
+    setVoiceStatus(
+      "Sending that to Alfred..."
+    );
+  }
+
+  function cancelSpeech() {
+    holdActiveRef.current = false;
+    speechSubmittedRef.current = true;
+
+    const activeRecognition =
+      recognitionRef.current ||
+      recognition;
+
+    if (activeRecognition) {
+      try {
+        activeRecognition.stop();
+      } catch {
+        // Nothing else to do.
+      }
+    }
+
+    recognitionRef.current = null;
+    setRecognition(null);
+    setIsListening(false);
+    heldTranscriptRef.current = "";
+
+    setVoiceStatus(
+      "Voice input cancelled."
+    );
+  }
+
+  function handleTalkPointerDown(
+    event: React.PointerEvent<HTMLButtonElement>
+  ) {
+    if (
+      loading ||
+      contextLoading
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    try {
+      event.currentTarget.setPointerCapture(
+        event.pointerId
+      );
+    } catch {
+      // Pointer capture is optional.
+    }
+
+    startSpeech();
+  }
+
+  function handleTalkPointerUp(
+    event: React.PointerEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+
+    try {
+      if (
+        event.currentTarget.hasPointerCapture(
+          event.pointerId
+        )
+      ) {
+        event.currentTarget.releasePointerCapture(
+          event.pointerId
+        );
+      }
+    } catch {
+      // Pointer capture is optional.
+    }
+
+    if (holdActiveRef.current) {
+      stopSpeech();
+    }
+  }
+
+  function handleTalkPointerCancel(
+    event: React.PointerEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+    cancelSpeech();
   }
 
   function clearConversation() {
+    cancelSpeech();
     stopSpeaking();
     setMessages([]);
     setPrompt("");
@@ -2858,31 +3040,53 @@ Do not invent activity.
                     : "Ask Alfred"}
               </button>
 
-              {!isListening ? (
-                <button
-                  className="btn btn-secondary"
-                  onClick={
-                    startSpeech
-                  }
-                  disabled={
+              <button
+                className="btn btn-secondary"
+                onPointerDown={
+                  handleTalkPointerDown
+                }
+                onPointerUp={
+                  handleTalkPointerUp
+                }
+                onPointerCancel={
+                  handleTalkPointerCancel
+                }
+                onContextMenu={(
+                  event
+                ) =>
+                  event.preventDefault()
+                }
+                disabled={
+                  loading ||
+                  contextLoading
+                }
+                aria-pressed={
+                  isListening
+                }
+                style={{
+                  touchAction:
+                    "none",
+                  userSelect:
+                    "none",
+                  WebkitUserSelect:
+                    "none",
+                  minWidth:
+                    "190px",
+                  transform:
+                    isListening
+                      ? "scale(0.98)"
+                      : "none",
+                  opacity:
                     loading ||
                     contextLoading
-                  }
-                >
-                  🎙️ Speak to
-                  Alfred
-                </button>
-              ) : (
-                <button
-                  className="btn btn-secondary"
-                  onClick={
-                    stopSpeech
-                  }
-                >
-                  ⏹ Stop
-                  listening
-                </button>
-              )}
+                      ? 0.6
+                      : 1,
+                }}
+              >
+                {isListening
+                  ? "🎙️ Listening... release to send"
+                  : "🎙️ Press & hold to talk"}
+              </button>
 
               <button
                 className="btn btn-secondary"
@@ -3014,6 +3218,26 @@ Do not invent activity.
                   Voice Lab
                 </a>
               </div>
+            </div>
+
+            <div
+              className="mode"
+              style={{
+                marginTop:
+                  "14px",
+              }}
+            >
+              <strong>
+                Voice input
+              </strong>
+
+              <span>
+                Press and hold the
+                microphone while you
+                speak. Release it to
+                send your words
+                straight to Alfred.
+              </span>
             </div>
 
             <div
