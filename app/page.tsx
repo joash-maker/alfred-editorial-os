@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {
@@ -122,6 +122,24 @@ type Project = {
   status: string | null;
 };
 
+type Interaction = {
+  id: string;
+  lead_id: string;
+  created_at?: string | null;
+  occurred_at?: string | null;
+  contact_name?: string | null;
+  channel?: string | null;
+  direction?: string | null;
+  outcome?: string | null;
+  summary?: string | null;
+  next_action?: string | null;
+  next_action_date?: string | null;
+  source?: string | null;
+};
+
+type VoiceMode = "natural" | "device" | "silent";
+type BedtimeMode = "normal" | "wind-down" | "stop";
+
 type Mode =
   | "general"
   | "creative-desk"
@@ -137,6 +155,67 @@ type Mode =
   | "service-agreement"
   | "invoice-generator"
   | "payment-instructions";
+
+function getLondonClockParts() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const value = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
+
+  return {
+    hour: Number(value("hour")),
+    minute: Number(value("minute")),
+    dateISO: `${value("year")}-${value("month")}-${value("day")}`,
+  };
+}
+
+function getGreetingText(hour: number) {
+  if (hour >= 5 && hour < 12) return "Good morning, Joash.";
+  if (hour >= 12 && hour < 17) return "Good afternoon, Joash.";
+  if (hour >= 17 && hour < 22) return "Good evening, Joash.";
+  return "Good night, Joash.";
+}
+
+function getBedtimeMode(hour: number, minute: number): BedtimeMode {
+  if (hour === 22 && minute >= 30) return "wind-down";
+  if (hour >= 23 || hour < 5) return "stop";
+  return "normal";
+}
+
+function getBedtimeReminder(mode: BedtimeMode) {
+  if (mode === "wind-down") {
+    return "It is time to stop for tonight, save your work and get ready for bed.";
+  }
+
+  if (mode === "stop") {
+    return "It is past your cut-off. That is enough for tonight. Save your work and go to bed. We can pick this up tomorrow.";
+  }
+
+  return "";
+}
+
+function getBedtimePromptRule() {
+  const { hour, minute } = getLondonClockParts();
+  const mode = getBedtimeMode(hour, minute);
+
+  if (mode === "wind-down") {
+    return "It is between 22:30 and 23:00 UK time. Remind Joash clearly to stop working and go to bed. Do not give him a new evening work block. You may state the first task for tomorrow or help with one tiny urgent action.";
+  }
+
+  if (mode === "stop") {
+    return "It is after Joash's nightly cut-off. Be firm but warm: tell him to stop working and go to bed. Do not encourage a new project, build, research session or extended task. Only help with something genuinely urgent or state the first task for tomorrow.";
+  }
+
+  return "Normal operating hours. If planning tonight, finish focused work by 22:30 UK time.";
+}
 
 const mediahubinkPositioning = `
 MEDIAHUBINK POSITIONING
@@ -737,6 +816,29 @@ export default function HomePage() {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognitionType | null>(null);
 
+  const [voicePrompt, setVoicePrompt] = useState("");
+  const [voiceReply, setVoiceReply] = useState("");
+  const [voiceSpokenReply, setVoiceSpokenReply] = useState("");
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [voiceIsListening, setVoiceIsListening] = useState(false);
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>("natural");
+  const [voiceStatus, setVoiceStatus] = useState("Alfred Natural ready.");
+  const [voiceIsSpeaking, setVoiceIsSpeaking] = useState(false);
+  const [voiceInteractions, setVoiceInteractions] = useState<Interaction[]>([]);
+  const [voiceContextMessage, setVoiceContextMessage] = useState(
+    "Loading recent CRM interaction history..."
+  );
+  const [voiceClock, setVoiceClock] = useState(() => getLondonClockParts());
+
+  const voiceRecognitionRef = useRef<SpeechRecognitionType | null>(null);
+  const voiceTranscriptRef = useRef("");
+  const voiceHoldActiveRef = useRef(false);
+  const voiceSubmittedRef = useRef(false);
+  const naturalAudioRef = useRef<HTMLAudioElement | null>(null);
+  const naturalAudioUrlRef = useRef("");
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const naturalSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [loadingThoughts, setLoadingThoughts] = useState(false);
   const [mode, setMode] = useState<Mode>("general");
@@ -862,6 +964,850 @@ export default function HomePage() {
   function stopSpeech() {
     recognition?.stop();
     setIsListening(false);
+  }
+
+  function cleanForSpeech(text: string) {
+    return text
+      .replace(/[#*_`>]/g, "")
+      .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/\n{2,}/g, ". ")
+      .replace(/\n/g, ". ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  function buildFallbackSpokenReply(text: string) {
+    const cleaned = cleanForSpeech(text);
+    if (!cleaned) return "";
+
+    const withoutDraft = cleaned
+      .split(/(?:subject:|email draft:|draft email:)/i)[0]
+      .trim();
+
+    const source = withoutDraft || cleaned;
+    const sentences =
+      source.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [source];
+
+    let spoken = "";
+
+    for (const sentence of sentences) {
+      const candidate = `${spoken} ${sentence}`
+        .replace(/\s{2,}/g, " ")
+        .trim();
+
+      if (candidate.length > 420 && spoken) break;
+      spoken = candidate;
+
+      if (spoken.length >= 180 || spoken.split(/\s+/).length >= 48) {
+        break;
+      }
+    }
+
+    return (spoken || source.slice(0, 420)).trim();
+  }
+
+  function parseVoiceReply(raw: string) {
+    const voiceMatch = raw.match(
+      /\[\[VOICE\]\]([\s\S]*?)\[\[\/VOICE\]\]/i
+    );
+    const answerMatch = raw.match(
+      /\[\[ANSWER\]\]([\s\S]*?)\[\[\/ANSWER\]\]/i
+    );
+
+    const written =
+      answerMatch?.[1]?.trim() ||
+      raw
+        .replace(/\[\[VOICE\]\][\s\S]*?\[\[\/VOICE\]\]/gi, "")
+        .replace(/\[\[\/?ANSWER\]\]/gi, "")
+        .trim();
+
+    return {
+      written: written || "I could not produce a response.",
+      spoken:
+        voiceMatch?.[1]?.trim() ||
+        buildFallbackSpokenReply(written),
+    };
+  }
+
+  function getVoiceIntro() {
+    if (typeof window === "undefined") {
+      return {
+        text: "",
+        greetingPending: false,
+        bedtimePending: false,
+        bedtimeKey: "",
+      };
+    }
+
+    const { hour, minute, dateISO } = getLondonClockParts();
+
+    const greetingPending =
+      window.sessionStorage.getItem("alfred_greeting_spoken") !== "yes";
+
+    const bedtimeMode = getBedtimeMode(hour, minute);
+    const bedtimeKey = `alfred_bedtime_${dateISO}`;
+    const bedtimePending =
+      bedtimeMode !== "normal" &&
+      window.sessionStorage.getItem(bedtimeKey) !== "yes";
+
+    const parts: string[] = [];
+
+    if (greetingPending) {
+      parts.push(getGreetingText(hour));
+    }
+
+    if (bedtimePending) {
+      parts.push(getBedtimeReminder(bedtimeMode));
+    }
+
+    return {
+      text: parts.join(" "),
+      greetingPending,
+      bedtimePending,
+      bedtimeKey,
+    };
+  }
+
+  function markVoiceIntroSpoken(
+    intro: ReturnType<typeof getVoiceIntro>
+  ) {
+    if (typeof window === "undefined") return;
+
+    if (intro.greetingPending) {
+      window.sessionStorage.setItem("alfred_greeting_spoken", "yes");
+    }
+
+    if (intro.bedtimePending && intro.bedtimeKey) {
+      window.sessionStorage.setItem(intro.bedtimeKey, "yes");
+    }
+  }
+
+  function buildSpokenText(
+    text: string,
+    intro: ReturnType<typeof getVoiceIntro>
+  ) {
+    const body = cleanForSpeech(text);
+    return intro.text
+      ? cleanForSpeech(`${intro.text} ${body}`)
+      : body;
+  }
+
+  function releaseNaturalAudio() {
+    if (naturalSourceRef.current) {
+      try {
+        naturalSourceRef.current.stop();
+      } catch {
+        // Already stopped.
+      }
+      naturalSourceRef.current = null;
+    }
+
+    if (naturalAudioRef.current) {
+      naturalAudioRef.current.pause();
+      naturalAudioRef.current = null;
+    }
+
+    if (naturalAudioUrlRef.current) {
+      URL.revokeObjectURL(naturalAudioUrlRef.current);
+      naturalAudioUrlRef.current = "";
+    }
+  }
+
+  async function unlockNaturalVoice() {
+    if (typeof window === "undefined" || voiceMode !== "natural") return;
+
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
+
+      if (audioContextRef.current.state === "suspended") {
+        await audioContextRef.current.resume();
+      }
+    } catch {
+      // HTML audio and device voice remain available as fallbacks.
+    }
+  }
+
+  function deviceSpeak(
+    text: string,
+    introOverride?: ReturnType<typeof getVoiceIntro>
+  ) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setVoiceStatus("Device voice is not supported by this browser.");
+      return;
+    }
+
+    const intro = introOverride || getVoiceIntro();
+    const spokenText = buildSpokenText(text, intro);
+
+    if (!spokenText) return;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.lang = "en-GB";
+    utterance.rate = 1.05;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const britishVoice =
+      voices.find((voice) => voice.lang.toLowerCase() === "en-gb") ||
+      voices.find((voice) =>
+        voice.lang.toLowerCase().startsWith("en")
+      );
+
+    if (britishVoice) utterance.voice = britishVoice;
+
+    utterance.onstart = () => {
+      markVoiceIntroSpoken(intro);
+      setVoiceIsSpeaking(true);
+      setVoiceStatus("Alfred is speaking with the device voice...");
+    };
+
+    utterance.onend = () => {
+      setVoiceIsSpeaking(false);
+      setVoiceStatus(
+        voiceMode === "natural"
+          ? "Alfred Natural ready."
+          : "Device voice ready."
+      );
+    };
+
+    utterance.onerror = () => {
+      setVoiceIsSpeaking(false);
+      setVoiceStatus("Playback was blocked. Tap Hear Alfred.");
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function naturalSpeak(text: string) {
+    const intro = getVoiceIntro();
+    const spokenText = buildSpokenText(text, intro);
+
+    if (!spokenText) return;
+
+    releaseNaturalAudio();
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    setVoiceStatus("Preparing Alfred Natural...");
+
+    try {
+      const response = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: spokenText }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Natural voice generation failed.");
+      }
+
+      const blob = await response.blob();
+      const context = audioContextRef.current;
+
+      if (context && context.state === "running") {
+        const arrayBuffer = await blob.arrayBuffer();
+        const audioBuffer = await context.decodeAudioData(
+          arrayBuffer.slice(0)
+        );
+        const source = context.createBufferSource();
+
+        source.buffer = audioBuffer;
+        source.connect(context.destination);
+        naturalSourceRef.current = source;
+
+        source.onended = () => {
+          naturalSourceRef.current = null;
+          setVoiceIsSpeaking(false);
+          setVoiceStatus("Alfred Natural ready.");
+        };
+
+        markVoiceIntroSpoken(intro);
+        setVoiceIsSpeaking(true);
+        setVoiceStatus("Alfred Natural is speaking...");
+        source.start(0);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audio.setAttribute("playsinline", "true");
+
+      naturalAudioRef.current = audio;
+      naturalAudioUrlRef.current = url;
+
+      audio.onplay = () => {
+        markVoiceIntroSpoken(intro);
+        setVoiceIsSpeaking(true);
+        setVoiceStatus("Alfred Natural is speaking...");
+      };
+
+      audio.onended = () => {
+        setVoiceIsSpeaking(false);
+        setVoiceStatus("Alfred Natural ready.");
+        releaseNaturalAudio();
+      };
+
+      audio.onerror = () => {
+        setVoiceIsSpeaking(false);
+        releaseNaturalAudio();
+        setVoiceStatus(
+          "Natural voice playback failed. Using device voice."
+        );
+        deviceSpeak(text, intro);
+      };
+
+      try {
+        await audio.play();
+      } catch {
+        setVoiceIsSpeaking(false);
+        setVoiceStatus(
+          "iPhone blocked automatic playback. Tap Hear Alfred once."
+        );
+      }
+    } catch {
+      setVoiceStatus(
+        "Alfred Natural is unavailable. Using device voice."
+      );
+      deviceSpeak(text, intro);
+    }
+  }
+
+  async function speakVoice(text: string) {
+    if (voiceMode === "silent") {
+      setVoiceStatus("Silent mode is on.");
+      return;
+    }
+
+    if (voiceMode === "device") {
+      deviceSpeak(text);
+      return;
+    }
+
+    await naturalSpeak(text);
+  }
+
+  function stopVoiceSpeaking() {
+    releaseNaturalAudio();
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    setVoiceIsSpeaking(false);
+    setVoiceStatus(
+      voiceMode === "natural"
+        ? "Alfred Natural ready."
+        : voiceMode === "device"
+          ? "Device voice ready."
+          : "Silent mode is on."
+    );
+  }
+
+  function chooseVoiceMode(nextMode: VoiceMode) {
+    stopVoiceSpeaking();
+    setVoiceMode(nextMode);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("alfred_home_voice_mode", nextMode);
+    }
+
+    if (nextMode === "silent") {
+      setVoiceStatus("Silent mode is on.");
+      return;
+    }
+
+    if (nextMode === "natural") {
+      void unlockNaturalVoice();
+      setVoiceStatus("Alfred Natural ready.");
+      return;
+    }
+
+    setVoiceStatus("Device voice ready.");
+  }
+
+  async function hearVoiceReply() {
+    if (!voiceSpokenReply && !voiceReply) {
+      setVoiceStatus("Alfred has not answered yet.");
+      return;
+    }
+
+    await unlockNaturalVoice();
+    await speakVoice(voiceSpokenReply || voiceReply);
+  }
+
+  function voiceInteractionContextForLead(leadId: string) {
+    return voiceInteractions
+      .filter((interaction) => interaction.lead_id === leadId)
+      .slice(0, 3);
+  }
+
+  function buildLeanVoiceContext(question: string) {
+    const today = getLondonClockParts().dateISO;
+    const q = question.toLowerCase();
+
+    const commonWords = new Set([
+      "limited",
+      "ltd",
+      "group",
+      "company",
+      "services",
+      "service",
+      "the",
+      "and",
+    ]);
+
+    const isNamedInQuestion = (lead: Lead) => {
+      const terms = [lead.company, lead.name]
+        .filter(Boolean)
+        .flatMap((value) =>
+          String(value)
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter(
+              (part) =>
+                part.length >= 4 &&
+                !commonWords.has(part)
+            )
+        );
+
+      return terms.some((term) => q.includes(term));
+    };
+
+    const priorityScore = (lead: Lead) => {
+      let score = 0;
+      const due = lead.next_action_date || lead.follow_up_date;
+
+      if (isNamedInQuestion(lead)) score += 1000;
+      if (due && due <= today) score += 300;
+
+      const priority = (lead.priority || "").toLowerCase();
+      if (priority === "high") score += 150;
+      if (priority === "medium") score += 70;
+
+      score += Number(lead.lead_score ?? lead.score ?? 0) * 3;
+      score += Math.min(
+        Number(lead.monthly_value ?? lead.estimated_value ?? 0) / 20,
+        100
+      );
+
+      return score;
+    };
+
+    const selectedLeads = [...leads]
+      .sort((a, b) => priorityScore(b) - priorityScore(a))
+      .slice(0, 12);
+
+    const leadContext =
+      selectedLeads.length > 0
+        ? selectedLeads
+            .map((lead) => {
+              const recent = voiceInteractionContextForLead(lead.id);
+              const history =
+                recent.length > 0
+                  ? recent
+                      .map(
+                        (interaction) =>
+                          `${interaction.occurred_at || interaction.created_at || "Unknown date"} | ${interaction.channel || "other"} | ${interaction.outcome || "No outcome"} | ${interaction.summary || "No summary"} | Next: ${interaction.next_action || "none"} | Due: ${interaction.next_action_date || "none"}`
+                      )
+                      .join("\n")
+                  : "No loaded interaction history.";
+
+              return `${lead.company || lead.name || "Unnamed lead"} | Contact: ${lead.name || "not added"} | Stage: ${lead.stage || "new"} | Priority: ${lead.priority || "not set"} | Score: ${lead.lead_score ?? lead.score ?? 0} | Value: £${lead.monthly_value ?? lead.estimated_value ?? 0} | Next: ${lead.next_action || "none"} | Due: ${lead.next_action_date || lead.follow_up_date || "none"}\nRecent interactions:\n${history}`;
+            })
+            .join("\n\n")
+        : "No CRM leads loaded.";
+
+    const projectContext =
+      projects.length > 0
+        ? projects
+            .slice(0, 8)
+            .map(
+              (project) =>
+                `${project.name} | ${project.category || "no category"} | ${project.status || "no status"}`
+            )
+            .join("\n")
+        : "No projects loaded.";
+
+    const offerContext =
+      offers.length > 0
+        ? offers
+            .slice(0, 6)
+            .map(
+              (offer) =>
+                `${offer.name} | ${offer.price || "price not set"}`
+            )
+            .join("\n")
+        : "No offers loaded.";
+
+    const demoContext =
+      demos.length > 0
+        ? demos
+            .slice(0, 8)
+            .map((demo) => `${demo.vertical}: ${demo.demo_url}`)
+            .join("\n")
+        : "No demos loaded.";
+
+    return `
+ALFRED MISSION CONTROL VOICE CONTEXT
+
+Current UK time:
+${new Date().toLocaleString("en-GB", {
+  timeZone: "Europe/London",
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+})}
+
+ROLE
+
+You are Alfred, Mediahubink's Sales, Strategy and Operating Chief of Staff.
+
+United Kingdom is the core commercial market.
+Namibia is a separate active AI market-entry track.
+
+LIVE PRIORITY CRM CONTEXT
+
+${leadContext}
+
+RECENT PROJECT CONTEXT
+
+${projectContext}
+
+CURRENT OFFERS
+
+${offerContext}
+
+SELECTED PROOF ASSETS
+
+${demoContext}
+
+OPERATING RULES
+
+- British English only.
+- No em dashes.
+- Do not invent activity, meetings, replies or CRM history.
+- Prefer advancing live conversations and overdue follow-ups before creating new work.
+- Give a clear priority when asked what to do next.
+- If detailed CRM interaction history is not loaded, say so rather than inventing it.
+- For deep CRM changes or Command Mode, direct Joash to the full Alfred Command Centre at /alfred.
+- ${getBedtimePromptRule()}
+`;
+  }
+
+  async function askAlfredVoice(questionOverride?: string) {
+    const question = (questionOverride ?? voicePrompt).trim();
+    if (!question || voiceLoading) return;
+
+    void unlockNaturalVoice();
+    stopVoiceSpeaking();
+
+    setVoicePrompt(question);
+    setVoiceLoading(true);
+    setVoiceReply("");
+    setVoiceSpokenReply("");
+    setVoiceStatus("Alfred is thinking...");
+
+    const voiceRequest = `
+${buildLeanVoiceContext(question)}
+
+JOASH'S REQUEST
+
+${question}
+
+RESPONSE FORMAT
+
+Return exactly:
+
+[[VOICE]]
+A short natural spoken reply, normally 1 to 3 sentences and no more than about 55 words.
+[[/VOICE]]
+
+[[ANSWER]]
+A useful written answer in Markdown. Keep it concise unless more detail is genuinely needed.
+[[/ANSWER]]
+
+VOICE RULES
+
+- Lead with the answer or decision.
+- Include the single next action where one exists.
+- Do not read long lists, URLs, email drafts or detailed evidence aloud.
+- Do not include Good morning, Good afternoon, Good evening or Good night. The voice layer handles the personal greeting.
+- If the bedtime guardrail is active, the spoken reply must prioritise stopping work.
+`;
+
+    try {
+      const response = await fetch("/api/alfred", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: voiceRequest }),
+      });
+
+      const data = await response.json();
+      const raw =
+        data.reply ||
+        data.error ||
+        "I could not produce a response.";
+
+      const parsed = parseVoiceReply(raw);
+
+      setVoiceReply(parsed.written);
+      setVoiceSpokenReply(parsed.spoken);
+
+      if (response.ok && data.reply && voiceMode !== "silent") {
+        setTimeout(() => {
+          void speakVoice(parsed.spoken);
+        }, 100);
+      } else {
+        setVoiceStatus(
+          voiceMode === "silent"
+            ? "Silent mode is on."
+            : "Alfred Natural ready."
+        );
+      }
+    } catch {
+      const message =
+        "Something went wrong while speaking to Alfred.";
+      setVoiceReply(message);
+      setVoiceSpokenReply(message);
+      setVoiceStatus("Voice request failed.");
+    } finally {
+      setVoiceLoading(false);
+    }
+  }
+
+  function submitHeldVoiceSpeech() {
+    if (voiceSubmittedRef.current) return;
+
+    const transcript = voiceTranscriptRef.current
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+    if (!transcript) {
+      setVoiceStatus(
+        "I didn't catch that. Press and hold while you speak."
+      );
+      return;
+    }
+
+    voiceSubmittedRef.current = true;
+    setVoicePrompt(transcript);
+    void askAlfredVoice(transcript);
+  }
+
+  function startVoiceSpeech() {
+    if (voiceLoading || voiceIsListening) return;
+
+    void unlockNaturalVoice();
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceStatus("Speech input is not supported in this browser.");
+      return;
+    }
+
+    stopVoiceSpeaking();
+
+    voiceTranscriptRef.current = "";
+    voiceSubmittedRef.current = false;
+    voiceHoldActiveRef.current = true;
+
+    const speech = new SpeechRecognition();
+    speech.continuous = true;
+    speech.interimResults = false;
+    speech.lang = "en-GB";
+
+    speech.onresult = (event: SpeechRecognitionEvent) => {
+      let transcript = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += `${event.results[i][0].transcript} `;
+      }
+
+      const cleaned = transcript.replace(/\s{2,}/g, " ").trim();
+      voiceTranscriptRef.current = cleaned;
+
+      if (cleaned) setVoicePrompt(cleaned);
+    };
+
+    speech.onerror = () => {
+      setVoiceIsListening(false);
+      voiceRecognitionRef.current = null;
+
+      if (!voiceHoldActiveRef.current) {
+        submitHeldVoiceSpeech();
+      }
+    };
+
+    speech.onend = () => {
+      setVoiceIsListening(false);
+      voiceRecognitionRef.current = null;
+
+      if (!voiceHoldActiveRef.current) {
+        submitHeldVoiceSpeech();
+      }
+    };
+
+    voiceRecognitionRef.current = speech;
+    setVoiceIsListening(true);
+    setVoiceStatus("Listening. Keep holding, then release to send.");
+
+    try {
+      speech.start();
+    } catch {
+      voiceHoldActiveRef.current = false;
+      setVoiceIsListening(false);
+      voiceRecognitionRef.current = null;
+      setVoiceStatus(
+        "The microphone could not start. Try pressing and holding again."
+      );
+    }
+  }
+
+  function stopVoiceSpeech() {
+    voiceHoldActiveRef.current = false;
+
+    const active = voiceRecognitionRef.current;
+
+    if (active) {
+      try {
+        active.stop();
+      } catch {
+        submitHeldVoiceSpeech();
+      }
+    } else {
+      setTimeout(() => submitHeldVoiceSpeech(), 50);
+    }
+
+    setVoiceIsListening(false);
+    setVoiceStatus("Sending that to Alfred...");
+  }
+
+  function cancelVoiceSpeech() {
+    voiceHoldActiveRef.current = false;
+    voiceSubmittedRef.current = true;
+
+    if (voiceRecognitionRef.current) {
+      try {
+        voiceRecognitionRef.current.stop();
+      } catch {
+        // Nothing else to do.
+      }
+    }
+
+    voiceRecognitionRef.current = null;
+    setVoiceIsListening(false);
+    voiceTranscriptRef.current = "";
+    setVoiceStatus("Voice input cancelled.");
+  }
+
+  function handleVoicePointerDown(
+    event: React.PointerEvent<HTMLButtonElement>
+  ) {
+    if (voiceLoading) return;
+
+    event.preventDefault();
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is optional.
+    }
+
+    startVoiceSpeech();
+  }
+
+  function handleVoicePointerUp(
+    event: React.PointerEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Pointer capture is optional.
+    }
+
+    if (voiceHoldActiveRef.current) {
+      stopVoiceSpeech();
+    }
+  }
+
+  function handleVoicePointerCancel(
+    event: React.PointerEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
+    cancelVoiceSpeech();
+  }
+
+  async function loadVoiceInteractions(loadedLeads: Lead[]) {
+    if (loadedLeads.length === 0) {
+      setVoiceInteractions([]);
+      setVoiceContextMessage("No CRM interactions loaded.");
+      return;
+    }
+
+    setVoiceContextMessage("Loading recent CRM interaction history...");
+
+    try {
+      const results = await Promise.all(
+        loadedLeads.slice(0, 50).map(async (lead) => {
+          try {
+            const response = await fetch(
+              `/api/leads/${lead.id}/interactions`,
+              { cache: "no-store" }
+            );
+
+            if (!response.ok) return [];
+
+            const data = await response.json();
+            return Array.isArray(data?.interactions)
+              ? data.interactions
+              : [];
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      const combined = results.flat() as Interaction[];
+
+      combined.sort((a, b) => {
+        const aTime = new Date(
+          a.occurred_at || a.created_at || 0
+        ).getTime();
+        const bTime = new Date(
+          b.occurred_at || b.created_at || 0
+        ).getTime();
+        return bTime - aTime;
+      });
+
+      setVoiceInteractions(combined);
+      setVoiceContextMessage(
+        `${combined.length} recent CRM interactions available to Alfred Voice.`
+      );
+    } catch {
+      setVoiceInteractions([]);
+      setVoiceContextMessage(
+        "CRM interaction history could not be loaded."
+      );
+    }
   }
 
   async function askAlfred(selectedMode: Mode = mode) {
@@ -1493,8 +2439,10 @@ ${paymentPrompt}
         return;
       }
 
-      setLeads(data.leads || []);
+      const loadedLeads = data.leads || [];
+      setLeads(loadedLeads);
       setLeadMessage("Leads loaded.");
+      void loadVoiceInteractions(loadedLeads);
     } catch {
       setLeadMessage("Something went wrong loading leads.");
     } finally {
@@ -1803,6 +2751,37 @@ ${paymentPrompt}
     loadLeads();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedVoiceMode =
+      window.localStorage.getItem("alfred_home_voice_mode");
+
+    if (
+      storedVoiceMode === "natural" ||
+      storedVoiceMode === "device" ||
+      storedVoiceMode === "silent"
+    ) {
+      setVoiceMode(storedVoiceMode);
+      setVoiceStatus(
+        storedVoiceMode === "natural"
+          ? "Alfred Natural ready."
+          : storedVoiceMode === "device"
+            ? "Device voice ready."
+            : "Silent mode is on."
+      );
+    }
+
+    const interval = window.setInterval(() => {
+      setVoiceClock(getLondonClockParts());
+    }, 30000);
+
+    return () => {
+      window.clearInterval(interval);
+      releaseNaturalAudio();
+    };
+  }, []);
+
   return (
     <main className="page">
       <div className="shell">
@@ -1810,12 +2789,205 @@ ${paymentPrompt}
           <div className="logo">
             <div className="logo-title">Alfred</div>
             <div className="logo-subtitle">
-              Mediahubink Editorial + Growth Chief of Staff
+              Mediahubink Sales, Strategy & Operating Chief of Staff
             </div>
           </div>
 
-          <div className="nav-pill">Private V1</div>
+          <div className="nav-pill">Mission Control V3</div>
         </nav>
+
+        <section
+          className="card"
+          id="alfred-voice"
+          style={{ marginBottom: "28px" }}
+        >
+          <div className="kicker">Alfred Voice · Mission Control</div>
+
+          <h1 style={{ marginBottom: "12px" }}>
+            What do you need?
+          </h1>
+
+          <p className="lead" style={{ maxWidth: "760px" }}>
+            Press and hold to speak. Release to send. Alfred will answer
+            with the short decision out loud and keep the useful detail
+            on screen.
+          </p>
+
+          {getBedtimeMode(voiceClock.hour, voiceClock.minute) !== "normal" && (
+            <div
+              className="mode"
+              style={{
+                marginTop: "18px",
+                border: "1px solid rgba(255,255,255,0.18)",
+              }}
+            >
+              <strong>Alfred bedtime reminder</strong>
+              <span>
+                {getBedtimeReminder(
+                  getBedtimeMode(voiceClock.hour, voiceClock.minute)
+                )}
+              </span>
+            </div>
+          )}
+
+          <div
+            className="actions"
+            style={{ marginTop: "20px", alignItems: "stretch" }}
+          >
+            <button
+              className="btn"
+              onPointerDown={handleVoicePointerDown}
+              onPointerUp={handleVoicePointerUp}
+              onPointerCancel={handleVoicePointerCancel}
+              onContextMenu={(event) => event.preventDefault()}
+              disabled={voiceLoading}
+              aria-pressed={voiceIsListening}
+              style={{
+                minHeight: "58px",
+                minWidth: "230px",
+                touchAction: "none",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                transform: voiceIsListening ? "scale(0.98)" : "none",
+              }}
+            >
+              {voiceIsListening
+                ? "🎙️ Listening... release to send"
+                : voiceLoading
+                  ? "Alfred is thinking..."
+                  : "🎙️ Press & hold to talk"}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() =>
+                askAlfredVoice("What needs my attention most right now?")
+              }
+              disabled={voiceLoading}
+            >
+              What needs attention?
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() =>
+                askAlfredVoice(
+                  "What is the single best thing I should do next?"
+                )
+              }
+              disabled={voiceLoading}
+            >
+              What should I do next?
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() =>
+                askAlfredVoice(
+                  "Which sales follow-ups deserve my attention now?"
+                )
+              }
+              disabled={voiceLoading}
+            >
+              Follow-ups
+            </button>
+
+            <a className="btn btn-secondary" href="/alfred">
+              Full Command Centre
+            </a>
+          </div>
+
+          <textarea
+            className="input-box"
+            value={voicePrompt}
+            onChange={(event) => setVoicePrompt(event.target.value)}
+            placeholder="Or type a quick question for Alfred..."
+            style={{ marginTop: "18px", minHeight: "92px" }}
+          />
+
+          <div className="actions" style={{ marginTop: "14px" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => askAlfredVoice()}
+              disabled={voiceLoading || !voicePrompt.trim()}
+            >
+              {voiceLoading ? "Thinking..." : "Ask with voice"}
+            </button>
+
+            <button
+              className={
+                voiceMode === "natural" ? "btn" : "btn btn-secondary"
+              }
+              onClick={() => chooseVoiceMode("natural")}
+            >
+              Alfred Natural
+            </button>
+
+            <button
+              className={
+                voiceMode === "device" ? "btn" : "btn btn-secondary"
+              }
+              onClick={() => chooseVoiceMode("device")}
+            >
+              Device Voice
+            </button>
+
+            <button
+              className={
+                voiceMode === "silent" ? "btn" : "btn btn-secondary"
+              }
+              onClick={() => chooseVoiceMode("silent")}
+            >
+              Silent
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={hearVoiceReply}
+              disabled={!voiceReply}
+            >
+              🔊 Hear Alfred
+            </button>
+
+            {voiceIsSpeaking && (
+              <button
+                className="btn btn-secondary"
+                onClick={stopVoiceSpeaking}
+              >
+                🔇 Stop Alfred
+              </button>
+            )}
+          </div>
+
+          <div className="mode-grid" style={{ marginTop: "16px" }}>
+            <div className="mode">
+              <strong>Voice status</strong>
+              <span>{voiceStatus}</span>
+            </div>
+
+            <div className="mode">
+              <strong>CRM voice context</strong>
+              <span>{voiceContextMessage}</span>
+            </div>
+
+            <div className="mode">
+              <strong>UK time</strong>
+              <span>
+                {String(voiceClock.hour).padStart(2, "0")}:
+                {String(voiceClock.minute).padStart(2, "0")}
+              </span>
+            </div>
+          </div>
+
+          {voiceReply && (
+            <div className="mode" style={{ marginTop: "18px" }}>
+              <strong>Alfred says:</strong>
+              <div className="markdown-output">
+                <ReactMarkdown>{voiceReply}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+        </section>
 
         <section className="hero">
           <div className="card">
