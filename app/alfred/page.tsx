@@ -563,6 +563,14 @@ export default function AlfredCommandCentrePage() {
   const naturalAudioUrlRef =
     useRef<string>("");
 
+  const audioContextRef =
+    useRef<AudioContext | null>(null);
+
+  const naturalSourceRef =
+    useRef<AudioBufferSourceNode | null>(
+      null
+    );
+
   const [isSpeaking, setIsSpeaking] =
     useState(false);
 
@@ -891,6 +899,16 @@ export default function AlfredCommandCentrePage() {
   }
 
   function releaseNaturalAudio() {
+    if (naturalSourceRef.current) {
+      try {
+        naturalSourceRef.current.stop();
+      } catch {
+        // Source may already have ended.
+      }
+
+      naturalSourceRef.current = null;
+    }
+
     if (naturalAudioRef.current) {
       naturalAudioRef.current.pause();
       naturalAudioRef.current = null;
@@ -901,6 +919,31 @@ export default function AlfredCommandCentrePage() {
         naturalAudioUrlRef.current
       );
       naturalAudioUrlRef.current = "";
+    }
+  }
+
+  async function unlockNaturalVoice() {
+    if (
+      typeof window === "undefined" ||
+      voiceMode !== "natural"
+    ) {
+      return;
+    }
+
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current =
+          new AudioContext();
+      }
+
+      if (
+        audioContextRef.current.state ===
+        "suspended"
+      ) {
+        await audioContextRef.current.resume();
+      }
+    } catch {
+      // HTMLAudio and device voice remain available as fallbacks.
     }
   }
 
@@ -1046,14 +1089,66 @@ export default function AlfredCommandCentrePage() {
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+
+      const context =
+        audioContextRef.current;
+
+      if (
+        context &&
+        context.state === "running"
+      ) {
+        const arrayBuffer =
+          await blob.arrayBuffer();
+
+        const audioBuffer =
+          await context.decodeAudioData(
+            arrayBuffer.slice(0)
+          );
+
+        const source =
+          context.createBufferSource();
+
+        source.buffer = audioBuffer;
+        source.connect(
+          context.destination
+        );
+
+        naturalSourceRef.current =
+          source;
+
+        source.onended = () => {
+          naturalSourceRef.current =
+            null;
+          setIsSpeaking(false);
+          setVoiceStatus(
+            "Alfred Natural ready."
+          );
+        };
+
+        markVoiceIntroSpoken(intro);
+        setIsSpeaking(true);
+        setVoiceStatus(
+          "Alfred Natural is speaking..."
+        );
+
+        source.start(0);
+        return;
+      }
+
+      const url =
+        URL.createObjectURL(blob);
+
       const audio = new Audio(url);
 
-audio.preload = "auto";
-audio.setAttribute("playsinline", "true");
+      audio.preload = "auto";
+      audio.setAttribute(
+        "playsinline",
+        "true"
+      );
 
       naturalAudioRef.current = audio;
-      naturalAudioUrlRef.current = url;
+      naturalAudioUrlRef.current =
+        url;
 
       audio.onplay = () => {
         markVoiceIntroSpoken(intro);
@@ -1085,7 +1180,7 @@ audio.setAttribute("playsinline", "true");
       } catch {
         setIsSpeaking(false);
         setVoiceStatus(
-          "Alfred Natural is ready. Tap Hear Alfred if iPhone blocks automatic playback."
+          "iPhone blocked automatic playback. Tap Hear Alfred once to unlock natural voice."
         );
       }
     } catch {
@@ -1132,6 +1227,11 @@ audio.setAttribute("playsinline", "true");
     }
 
     setAutoSpeak(true);
+
+    if (mode === "natural") {
+      void unlockNaturalVoice();
+    }
+
     setVoiceStatus(
       mode === "natural"
         ? "Alfred Natural ready."
@@ -1146,6 +1246,8 @@ audio.setAttribute("playsinline", "true");
       );
       return;
     }
+
+    await unlockNaturalVoice();
 
     await speak(
       "Alfred is ready. Voice, memory and command systems are available."
@@ -1201,6 +1303,7 @@ audio.setAttribute("playsinline", "true");
       return;
     }
 
+    await unlockNaturalVoice();
     await speak(reply);
   }
 
@@ -2083,6 +2186,7 @@ Never alter contact details or financial values.
       return;
     }
 
+    void unlockNaturalVoice();
     setCommandSaving(true);
     setCommandMessage("");
 
@@ -2170,6 +2274,7 @@ Never alter contact details or financial values.
       return;
     }
 
+    void unlockNaturalVoice();
     stopSpeaking();
 
     const userMessage: ChatMessage =
@@ -2287,6 +2392,8 @@ Do not invent activity.
   }
 
   function startSpeech() {
+    void unlockNaturalVoice();
+
     const speechWindow =
       window as SpeechWindow;
 
