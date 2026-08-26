@@ -1049,8 +1049,8 @@ export default function AlfredCommandCentrePage() {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
 
-      audio.preload = "auto";
-      audio.playsInline = true;
+audio.preload = "auto";
+audio.setAttribute("playsinline", "true");
 
       naturalAudioRef.current = audio;
       naturalAudioUrlRef.current = url;
