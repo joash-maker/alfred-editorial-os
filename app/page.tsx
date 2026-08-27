@@ -3035,72 +3035,211 @@ ${paymentPrompt}
 
         <section className="hero">
           <div className="card">
-            <div className="kicker">The Creative Desk · Mediahubink</div>
-            <h1>Your ideas, turned into clear publishing momentum.</h1>
-            <p className="lead">
-              Alfred helps capture what you are building, learning, testing and
-              sharing, then turns it into Substack posts, LinkedIn content,
-              client lead campaigns and calm strategic follow-up.
+            <div className="kicker">
+              Mission Control Workspaces
+            </div>
+
+            <h2
+              style={{
+                margin: "10px 0 12px",
+                fontSize: "clamp(34px, 6vw, 58px)",
+                lineHeight: 1.02,
+                letterSpacing: "-0.035em",
+              }}
+            >
+              Move the work forward.
+            </h2>
+
+            <p
+              className="lead"
+              style={{ maxWidth: "760px" }}
+            >
+              Use Alfred Voice for fast decisions, then open the workspace
+              you need for deeper sales, strategy, building or knowledge work.
             </p>
 
-            <div className="actions">
-              <a className="btn" href="#quick-create">
-                Open Quick Create
-              </a>
-              <a className="btn btn-secondary" href="/strategy">
-                Strategy
-              </a>
-              <a className="btn btn-secondary" href="/pipeline">
-                Pipeline
-              </a>
-              <a className="btn btn-secondary" href="/signal-log">
-                Signal Log
-              </a>
-              <a className="btn btn-secondary" href="/market-intelligence">
-                Market Intelligence
-              </a>
-              <a className="btn btn-secondary" href="/analytics">
-                Analytics
-              </a>
-              <a className="btn btn-secondary" href="/operating-manual">
-                Operating Manual
-              </a>
-              <a className="btn btn-secondary" href="/knowledge-base">
-                Knowledge Base
-              </a>
-              <a className="btn btn-secondary" href="/solutions">
-                Mediahubink Solutions
-              </a>
-              <a className="btn btn-secondary" href="/opportunities">
-                Opportunity Hub
-              </a>
-              <a className="btn btn-secondary" href="/daily-briefing">
-                Daily Briefing
-              </a>
-              <a className="btn btn-secondary" href="/divine-intelligence">
-                Divine Intelligence
-              </a>
-              <a className="btn btn-secondary" href="/creative-desk">
-                Creative Desk OS
-              </a>
-              <a className="btn btn-secondary" href="/creative-desk/generator">
-                Creative Desk Generator
-              </a>
-              <a className="btn btn-secondary" href="#projects">
-                View Projects
-              </a>
-              <a className="btn btn-secondary" href="#knowledge">
-                View Knowledge
-              </a>
-              <a className="btn btn-secondary" href="#business">
-                View Demos
-              </a>
-              <a className="btn btn-secondary" href="#crm">
-                View CRM
-              </a>
-              <a className="btn btn-secondary" href="#memory">
-                View Memory
-              </a>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "14px",
+                marginTop: "24px",
+              }}
+            >
+              <div className="mode">
+                <strong>Operate</strong>
+                <span>
+                  Run the day, review priorities and make decisions.
+                </span>
+
+                <div
+                  className="actions"
+                  style={{ marginTop: "12px" }}
+                >
+                  <a
+                    className="btn btn-secondary"
+                    href="/daily-briefing"
+                  >
+                    Daily Briefing
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/alfred"
+                  >
+                    Alfred Command Centre
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/strategy"
+                  >
+                    Strategy
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/analytics"
+                  >
+                    Analytics
+                  </a>
+                </div>
+              </div>
+
+              <div className="mode">
+                <strong>Sell</strong>
+                <span>
+                  Advance live opportunities and commercial conversations.
+                </span>
+
+                <div
+                  className="actions"
+                  style={{ marginTop: "12px" }}
+                >
+                  <a
+                    className="btn btn-secondary"
+                    href="#crm"
+                  >
+                    CRM
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/pipeline"
+                  >
+                    Pipeline
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/opportunities"
+                  >
+                    Opportunity Hub
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/market-intelligence"
+                  >
+                    Market Intelligence
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/solutions"
+                  >
+                    Mediahubink Solutions
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="#business"
+                  >
+                    Demos
+                  </a>
+                </div>
+              </div>
+
+              <div className="mode">
+                <strong>Build & Think</strong>
+                <span>
+                  Create, capture signals and develop useful proof assets.
+                </span>
+
+                <div
+                  className="actions"
+                  style={{ marginTop: "12px" }}
+                >
+                  <a
+                    className="btn btn-secondary"
+                    href="#quick-create"
+                  >
+                    Quick Create
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/creative-desk"
+                  >
+                    Creative Desk
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/signal-log"
+                  >
+                    Signal Log
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="#projects"
+                  >
+                    Projects
+                  </a>
+                </div>
+              </div>
+
+              <div className="mode">
+                <strong>Knowledge</strong>
+                <span>
+                  Use Alfred's operating knowledge, memory and reference tools.
+                </span>
+
+                <div
+                  className="actions"
+                  style={{ marginTop: "12px" }}
+                >
+                  <a
+                    className="btn btn-secondary"
+                    href="/knowledge-base"
+                  >
+                    Knowledge Base
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/operating-manual"
+                  >
+                    Operating Manual
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="#memory"
+                  >
+                    Memory
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/divine-intelligence"
+                  >
+                    Divine Intelligence
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
