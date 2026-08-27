@@ -66,6 +66,24 @@ type Project = {
   status?: string | null;
 };
 
+type SolutionAsset = {
+  id: string;
+  name: string;
+  slug: string;
+  url: string;
+  family?: string | null;
+  asset_type?: string | null;
+  markets?: string[] | null;
+  sectors?: string[] | null;
+  use_cases?: string[] | null;
+  commercial_status?: string | null;
+  description?: string | null;
+  best_used_for?: string | null;
+  related_products?: string[] | null;
+  notes?: string | null;
+  is_active?: boolean | null;
+};
+
 type Demo = {
   id: string;
   vertical: string;
@@ -512,6 +530,9 @@ export default function AlfredCommandCentrePage() {
   const [projects, setProjects] =
     useState<Project[]>([]);
 
+  const [solutionAssets, setSolutionAssets] =
+    useState<SolutionAsset[]>([]);
+
   const [demos, setDemos] =
     useState<Demo[]>([]);
 
@@ -710,6 +731,7 @@ export default function AlfredCommandCentrePage() {
       offerData,
       knowledgeData,
       thoughtData,
+      assetData,
     ] = await Promise.all([
       fetchJson("/api/leads/list"),
       fetchJson("/api/projects/list"),
@@ -719,6 +741,9 @@ export default function AlfredCommandCentrePage() {
         "/api/knowledge/list"
       ),
       fetchJson("/api/thoughts/list"),
+      fetchJson(
+        "/api/assets?active_only=true"
+      ),
     ]);
 
     const loadedLeads =
@@ -735,6 +760,10 @@ export default function AlfredCommandCentrePage() {
     );
     setThoughts(
       thoughtData?.thoughts || []
+    );
+
+    setSolutionAssets(
+      assetData?.assets || []
     );
 
     const loadedInteractions =
@@ -1499,10 +1528,25 @@ Objective: ${campaign.objective}`
         .join("\n\n");
 
     const productContext =
-      products
-        .map(
-          (product) =>
-            `${product.name}
+      solutionAssets.length > 0
+        ? solutionAssets
+            .map(
+              (asset) =>
+                `${asset.name}
+Family: ${asset.family || "not set"}
+Type: ${asset.asset_type || "asset"}
+Markets: ${(asset.markets || []).join(", ") || "none"}
+Sectors: ${(asset.sectors || []).join(", ") || "none"}
+Commercial status: ${asset.commercial_status || "not set"}
+Use cases: ${(asset.use_cases || []).join(", ") || "none"}
+Best used for: ${asset.best_used_for || "not set"}
+URL: ${asset.url}`
+            )
+            .join("\n\n")
+        : products
+            .map(
+              (product) =>
+                `${product.name}
 Family: ${product.family}
 Type: ${product.type}
 Markets: ${product.markets.join(", ")}
@@ -1510,8 +1554,8 @@ Sectors: ${product.sectors.join(", ")}
 Commercial status: ${product.commercialStatus}
 Use cases: ${product.useCases.join(", ")}
 URL: ${product.url}`
-        )
-        .join("\n\n");
+            )
+            .join("\n\n");
 
     const projectContext =
       projects.length > 0
@@ -3024,6 +3068,13 @@ Do not invent activity.
                 Daily Briefing
               </a>
 
+              <a
+                className="btn btn-secondary"
+                href="/asset-registry"
+              >
+                Asset Registry
+              </a>
+
               <button
                 className="btn btn-secondary"
                 onClick={
@@ -3977,7 +4028,8 @@ Do not invent activity.
                 assets
               </h3>
               <p>
-                {products.length}
+                {solutionAssets.length ||
+                  products.length}
               </p>
             </div>
           </div>
