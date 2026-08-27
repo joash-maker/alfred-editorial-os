@@ -76,7 +76,7 @@ export async function POST(
             similarity_boost: 0.78,
             style: 0,
             use_speaker_boost: true,
-            speed: 1.10,
+            speed: 1.20,
           },
         }),
       }
