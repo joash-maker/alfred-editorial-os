@@ -834,6 +834,7 @@ export default function HomePage() {
   const voiceTranscriptRef = useRef("");
   const voiceHoldActiveRef = useRef(false);
   const voiceSubmittedRef = useRef(false);
+  const voiceLastTouchAtRef = useRef(0);
   const naturalAudioRef = useRef<HTMLAudioElement | null>(null);
   const naturalAudioUrlRef = useRef("");
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -1715,45 +1716,83 @@ VOICE RULES
     setVoiceStatus("Voice input cancelled.");
   }
 
-  function handleVoicePointerDown(
-    event: React.PointerEvent<HTMLButtonElement>
+  function handleVoiceTouchStart(
+    event: React.TouchEvent<HTMLButtonElement>
   ) {
     if (voiceLoading) return;
 
     event.preventDefault();
-
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture is optional.
-    }
+    voiceLastTouchAtRef.current = Date.now();
 
     startVoiceSpeech();
   }
 
-  function handleVoicePointerUp(
-    event: React.PointerEvent<HTMLButtonElement>
+  function handleVoiceTouchEnd(
+    event: React.TouchEvent<HTMLButtonElement>
   ) {
     event.preventDefault();
-
-    try {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-    } catch {
-      // Pointer capture is optional.
-    }
 
     if (voiceHoldActiveRef.current) {
       stopVoiceSpeech();
     }
   }
 
-  function handleVoicePointerCancel(
-    event: React.PointerEvent<HTMLButtonElement>
+  function handleVoiceTouchCancel(
+    event: React.TouchEvent<HTMLButtonElement>
   ) {
     event.preventDefault();
     cancelVoiceSpeech();
+  }
+
+  function handleVoiceMouseDown(
+    event: React.MouseEvent<HTMLButtonElement>
+  ) {
+    if (
+      voiceLoading ||
+      Date.now() -
+        voiceLastTouchAtRef.current <
+        800
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    startVoiceSpeech();
+  }
+
+  function handleVoiceMouseUp(
+    event: React.MouseEvent<HTMLButtonElement>
+  ) {
+    if (
+      Date.now() -
+        voiceLastTouchAtRef.current <
+        800
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (voiceHoldActiveRef.current) {
+      stopVoiceSpeech();
+    }
+  }
+
+  function handleVoiceMouseLeave(
+    event: React.MouseEvent<HTMLButtonElement>
+  ) {
+    if (
+      Date.now() -
+        voiceLastTouchAtRef.current <
+        800
+    ) {
+      return;
+    }
+
+    if (voiceHoldActiveRef.current) {
+      event.preventDefault();
+      stopVoiceSpeech();
+    }
   }
 
   async function loadVoiceInteractions(loadedLeads: Lead[]) {
@@ -2836,9 +2875,14 @@ ${paymentPrompt}
           >
             <button
               className="btn"
-              onPointerDown={handleVoicePointerDown}
-              onPointerUp={handleVoicePointerUp}
-              onPointerCancel={handleVoicePointerCancel}
+              type="button"
+              onTouchStart={handleVoiceTouchStart}
+              onTouchEnd={handleVoiceTouchEnd}
+              onTouchCancel={handleVoiceTouchCancel}
+              onMouseDown={handleVoiceMouseDown}
+              onMouseUp={handleVoiceMouseUp}
+              onMouseLeave={handleVoiceMouseLeave}
+              onClick={(event) => event.preventDefault()}
               onContextMenu={(event) => event.preventDefault()}
               disabled={voiceLoading}
               aria-pressed={voiceIsListening}
