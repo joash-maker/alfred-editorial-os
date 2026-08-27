@@ -1398,6 +1398,8 @@ export default function HomePage() {
       "service",
       "the",
       "and",
+      "care",
+      "home",
     ]);
 
     const isNamedInQuestion = (lead: Lead) => {
@@ -1417,82 +1419,261 @@ export default function HomePage() {
       return terms.some((term) => q.includes(term));
     };
 
+    const asksAboutFollowUps =
+      /\b(follow[\s-]?up|follow ups|chase|due|overdue|contact|called|emailed|message|replied|reply|prospect|lead|crm|pipeline)\b/i.test(
+        question
+      );
+
+    const asksAboutNamibia =
+      /\b(namibia|namibian|namready|kaya|ncci|windhoek)\b/i.test(
+        question
+      );
+
+    const asksAboutAssets =
+      /\b(demo|demos|project|projects|proof asset|proof assets|solution|solutions|product|products|build|website|site)\b/i.test(
+        question
+      );
+
+    const asksAboutCommercialOffer =
+      /\b(price|pricing|offer|offers|fredi|capture|voice agent|voice|retainer|proposal)\b/i.test(
+        question
+      );
+
+    const namedLeads = leads.filter(
+      isNamedInQuestion
+    );
+
     const priorityScore = (lead: Lead) => {
       let score = 0;
-      const due = lead.next_action_date || lead.follow_up_date;
+      const due =
+        lead.next_action_date ||
+        lead.follow_up_date;
 
-      if (isNamedInQuestion(lead)) score += 1000;
-      if (due && due <= today) score += 300;
+      if (isNamedInQuestion(lead)) {
+        score += 2000;
+      }
 
-      const priority = (lead.priority || "").toLowerCase();
-      if (priority === "high") score += 150;
-      if (priority === "medium") score += 70;
+      if (due && due <= today) {
+        score += 450;
+      }
 
-      score += Number(lead.lead_score ?? lead.score ?? 0) * 3;
+      if (
+        asksAboutNamibia &&
+        (lead.region || "")
+          .toLowerCase()
+          .includes("namibia")
+      ) {
+        score += 700;
+      }
+
+      const priority =
+        (lead.priority || "")
+          .toLowerCase();
+
+      if (priority === "high") {
+        score += 180;
+      }
+
+      if (priority === "medium") {
+        score += 70;
+      }
+
+      score +=
+        Number(
+          lead.lead_score ??
+            lead.score ??
+            0
+        ) * 3;
+
       score += Math.min(
-        Number(lead.monthly_value ?? lead.estimated_value ?? 0) / 20,
-        100
+        Number(
+          lead.monthly_value ??
+            lead.estimated_value ??
+            0
+        ) / 30,
+        80
       );
 
       return score;
     };
 
-    const selectedLeads = [...leads]
-      .sort((a, b) => priorityScore(b) - priorityScore(a))
-      .slice(0, 12);
+    const rankedLeads = [...leads].sort(
+      (a, b) =>
+        priorityScore(b) -
+        priorityScore(a)
+    );
+
+    let selectedLeads: Lead[] = [];
+
+    if (namedLeads.length > 0) {
+      const namedIds = new Set(
+        namedLeads.map((lead) => lead.id)
+      );
+
+      selectedLeads = [
+        ...namedLeads,
+        ...rankedLeads.filter(
+          (lead) =>
+            !namedIds.has(lead.id) &&
+            (
+              lead.next_action_date ||
+              lead.follow_up_date
+            ) &&
+            (
+              lead.next_action_date ||
+              lead.follow_up_date ||
+              ""
+            ) <= today
+        ),
+      ].slice(0, 5);
+    } else if (asksAboutNamibia) {
+      selectedLeads = rankedLeads
+        .filter((lead) =>
+          (lead.region || "")
+            .toLowerCase()
+            .includes("namibia")
+        )
+        .slice(0, 6);
+
+      if (selectedLeads.length === 0) {
+        selectedLeads =
+          rankedLeads.slice(0, 4);
+      }
+    } else if (asksAboutFollowUps) {
+      selectedLeads =
+        rankedLeads.slice(0, 8);
+    } else {
+      selectedLeads =
+        rankedLeads.slice(0, 5);
+    }
+
+    const interactionLimit =
+      namedLeads.length > 0
+        ? 3
+        : asksAboutFollowUps
+          ? 2
+          : 1;
 
     const leadContext =
       selectedLeads.length > 0
         ? selectedLeads
             .map((lead) => {
-              const recent = voiceInteractionContextForLead(lead.id);
+              const recent =
+                voiceInteractions
+                  .filter(
+                    (interaction) =>
+                      interaction.lead_id ===
+                      lead.id
+                  )
+                  .slice(
+                    0,
+                    interactionLimit
+                  );
+
               const history =
                 recent.length > 0
                   ? recent
                       .map(
-                        (interaction) =>
-                          `${interaction.occurred_at || interaction.created_at || "Unknown date"} | ${interaction.channel || "other"} | ${interaction.outcome || "No outcome"} | ${interaction.summary || "No summary"} | Next: ${interaction.next_action || "none"} | Due: ${interaction.next_action_date || "none"}`
+                        (
+                          interaction
+                        ) =>
+                          `${interaction.occurred_at || interaction.created_at || "Unknown date"} | ${interaction.channel || "other"} | ${interaction.outcome || "No outcome"} | ${interaction.summary || "No summary"}`
                       )
                       .join("\n")
                   : "No loaded interaction history.";
 
-              return `${lead.company || lead.name || "Unnamed lead"} | Contact: ${lead.name || "not added"} | Stage: ${lead.stage || "new"} | Priority: ${lead.priority || "not set"} | Score: ${lead.lead_score ?? lead.score ?? 0} | Value: £${lead.monthly_value ?? lead.estimated_value ?? 0} | Next: ${lead.next_action || "none"} | Due: ${lead.next_action_date || lead.follow_up_date || "none"}\nRecent interactions:\n${history}`;
+              return `${lead.company || lead.name || "Unnamed lead"} | Contact: ${lead.name || "not added"} | Stage: ${lead.stage || "new"} | Priority: ${lead.priority || "not set"} | Score: ${lead.lead_score ?? lead.score ?? 0} | Value: £${lead.monthly_value ?? lead.estimated_value ?? 0} | Next: ${lead.next_action || "none"} | Due: ${lead.next_action_date || lead.follow_up_date || "none"}
+Recent: ${history}`;
             })
             .join("\n\n")
-        : "No CRM leads loaded.";
+        : "No relevant CRM leads loaded.";
+
+    const relevantProjects =
+      asksAboutAssets ||
+      asksAboutNamibia
+        ? projects
+            .filter((project) => {
+              if (!asksAboutNamibia) {
+                return true;
+              }
+
+              const haystack = [
+                project.name,
+                project.category,
+                project.audience,
+                project.description,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+              return (
+                haystack.includes(
+                  "namibia"
+                ) ||
+                haystack.includes(
+                  "namready"
+                ) ||
+                haystack.includes(
+                  "kaya"
+                )
+              );
+            })
+            .slice(0, 5)
+        : [];
 
     const projectContext =
-      projects.length > 0
-        ? projects
-            .slice(0, 8)
+      relevantProjects.length > 0
+        ? relevantProjects
             .map(
               (project) =>
                 `${project.name} | ${project.category || "no category"} | ${project.status || "no status"}`
             )
             .join("\n")
-        : "No projects loaded.";
+        : "Not required for this request.";
 
     const offerContext =
-      offers.length > 0
+      asksAboutCommercialOffer
         ? offers
-            .slice(0, 6)
+            .slice(0, 4)
             .map(
               (offer) =>
                 `${offer.name} | ${offer.price || "price not set"}`
             )
-            .join("\n")
-        : "No offers loaded.";
+            .join("\n") ||
+          "No offers loaded."
+        : "Not required for this request.";
 
     const demoContext =
-      demos.length > 0
+      asksAboutAssets ||
+      asksAboutCommercialOffer
         ? demos
-            .slice(0, 8)
-            .map((demo) => `${demo.vertical}: ${demo.demo_url}`)
-            .join("\n")
-        : "No demos loaded.";
+            .slice(0, 4)
+            .map(
+              (demo) =>
+                `${demo.vertical}: ${demo.demo_url}`
+            )
+            .join("\n") ||
+          "No demos loaded."
+        : "Not required for this request.";
+
+    const contextMode =
+      namedLeads.length > 0
+        ? "specific-company"
+        : asksAboutNamibia
+          ? "namibia"
+          : asksAboutFollowUps
+            ? "crm-follow-up"
+            : asksAboutAssets ||
+                asksAboutCommercialOffer
+              ? "commercial-assets"
+              : "fast-priority";
 
     return `
-ALFRED MISSION CONTROL VOICE CONTEXT
+ALFRED FAST VOICE CONTEXT
+
+Context mode:
+${contextMode}
 
 Current UK time:
 ${new Date().toLocaleString("en-GB", {
@@ -1510,33 +1691,36 @@ ROLE
 You are Alfred, Mediahubink's Sales, Strategy and Operating Chief of Staff.
 
 United Kingdom is the core commercial market.
-Namibia is a separate active AI market-entry track.
+Namibia is a separate active market-entry track.
 
-LIVE PRIORITY CRM CONTEXT
+RELEVANT CRM
 
 ${leadContext}
 
-RECENT PROJECT CONTEXT
+RELEVANT PROJECTS
 
 ${projectContext}
 
-CURRENT OFFERS
+RELEVANT OFFERS
 
 ${offerContext}
 
-SELECTED PROOF ASSETS
+RELEVANT PROOF ASSETS
 
 ${demoContext}
 
-OPERATING RULES
+FAST OPERATING RULES
 
 - British English only.
 - No em dashes.
 - Do not invent activity, meetings, replies or CRM history.
-- Prefer advancing live conversations and overdue follow-ups before creating new work.
-- Give a clear priority when asked what to do next.
-- If detailed CRM interaction history is not loaded, say so rather than inventing it.
-- For deep CRM changes or Command Mode, direct Joash to the full Alfred Command Centre at /alfred.
+- Use only the context needed for the request.
+- Prefer live conversations, overdue follow-ups and revenue activity before new building.
+- Give one clear priority when asked what to do next.
+- If a named company appears, focus on that company rather than reciting the wider pipeline.
+- If CRM interaction history is not loaded, say so rather than guessing.
+- Keep homepage voice answers fast and decisive.
+- For deep analysis, lengthy drafting or CRM changes, direct Joash to the relevant workspace or the full Alfred Command Centre at /alfred.
 - ${getBedtimePromptRule()}
 `;
   }
@@ -1566,18 +1750,22 @@ RESPONSE FORMAT
 Return exactly:
 
 [[VOICE]]
-A short natural spoken reply, normally 1 to 3 sentences and no more than about 55 words.
+A fast natural spoken reply of 1 to 3 sentences, maximum 45 words.
 [[/VOICE]]
 
 [[ANSWER]]
-A useful written answer in Markdown. Keep it concise unless more detail is genuinely needed.
+A concise written answer in Markdown.
 [[/ANSWER]]
 
-VOICE RULES
+FAST RESPONSE RULES
 
-- Lead with the answer or decision.
+- Lead immediately with the answer or decision.
 - Include the single next action where one exists.
+- Keep the written answer under 140 words for ordinary voice questions.
+- If Joash explicitly asks for a short email, message or script, keep the written draft under 220 words and do not add unnecessary explanation.
 - Do not read long lists, URLs, email drafts or detailed evidence aloud.
+- Do not produce a long report from the homepage voice interface.
+- If the request genuinely needs deeper analysis, say what matters now and direct Joash to the relevant workspace or Full Command Centre.
 - Do not include Good morning, Good afternoon, Good evening or Good night. The voice layer handles the personal greeting.
 - If the bedtime guardrail is active, the spoken reply must prioritise stopping work.
 `;
@@ -1872,7 +2060,7 @@ VOICE RULES
 
       setVoiceInteractions(combined);
       setVoiceContextMessage(
-        `${combined.length} recent CRM interactions available to Alfred Voice.`
+        `${combined.length} recent CRM interactions available. Fast voice routing is active.`
       );
     } catch {
       setVoiceInteractions([]);
@@ -3110,6 +3298,9 @@ ${paymentPrompt}
                 CRM voice context
               </strong>
               <span>{voiceContextMessage}</span>
+              <span>
+                Alfred now loads only the context needed for each quick voice request.
+              </span>
             </div>
 
             <div className="mode">
