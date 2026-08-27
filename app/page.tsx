@@ -122,6 +122,24 @@ type Project = {
   status: string | null;
 };
 
+type SolutionAsset = {
+  id: string;
+  name: string;
+  slug: string;
+  url: string;
+  family?: string | null;
+  asset_type?: string | null;
+  markets?: string[] | null;
+  sectors?: string[] | null;
+  use_cases?: string[] | null;
+  commercial_status?: string | null;
+  description?: string | null;
+  best_used_for?: string | null;
+  related_products?: string[] | null;
+  notes?: string | null;
+  is_active?: boolean | null;
+};
+
 type Interaction = {
   id: string;
   lead_id: string;
@@ -897,6 +915,9 @@ export default function HomePage() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projectMessage, setProjectMessage] = useState("");
 
+  const [solutionAssets, setSolutionAssets] =
+    useState<SolutionAsset[]>([]);
+
   const [leadName, setLeadName] = useState("");
   const [leadCompany, setLeadCompany] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
@@ -1657,6 +1678,69 @@ Recent: ${history}`;
           "No demos loaded."
         : "Not required for this request.";
 
+    const relevantAssets =
+      solutionAssets
+        .map((asset) => {
+          const haystack = [
+            asset.name,
+            asset.family,
+            asset.asset_type,
+            asset.commercial_status,
+            ...(asset.markets || []),
+            ...(asset.sectors || []),
+            ...(asset.use_cases || []),
+            asset.description,
+            asset.best_used_for,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          let score = 0;
+
+          const nameTerms = asset.name
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((part) => part.length >= 4);
+
+          if (nameTerms.some((term) => q.includes(term))) {
+            score += 1000;
+          }
+
+          if (
+            asksAboutNamibia &&
+            (asset.markets || []).some(
+              (market) => market.toLowerCase() === "namibia"
+            )
+          ) {
+            score += 500;
+          }
+
+          if (asksAboutCommercialOffer && haystack.includes("fredi")) {
+            score += 350;
+          }
+
+          if (asksAboutAssets) {
+            score += 120;
+          }
+
+          return { asset, score };
+        })
+        .filter((item) => item.score > 0 || asksAboutAssets)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6)
+        .map((item) => item.asset);
+
+    const assetContext =
+      relevantAssets.length > 0
+        ? relevantAssets
+            .map(
+              (asset) =>
+                `${asset.name} | ${asset.family || "No family"} | ${asset.asset_type || "asset"} | Markets: ${(asset.markets || []).join(", ") || "none"} | Sectors: ${(asset.sectors || []).join(", ") || "none"} | Use cases: ${(asset.use_cases || []).join(", ") || "none"} | Best used for: ${asset.best_used_for || "not set"} | URL: ${asset.url}`
+            )
+            .join("\n")
+        : "No solution asset needed for this request.";
+
     const contextMode =
       namedLeads.length > 0
         ? "specific-company"
@@ -1708,6 +1792,10 @@ ${offerContext}
 RELEVANT PROOF ASSETS
 
 ${demoContext}
+
+SOLUTION & PROOF ASSET REGISTRY
+
+${assetContext}
 
 FAST OPERATING RULES
 
@@ -2710,6 +2798,25 @@ ${paymentPrompt}
     }
   }
 
+  async function loadSolutionAssets() {
+    try {
+      const response = await fetch(
+        "/api/assets?active_only=true",
+        { cache: "no-store" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return;
+      }
+
+      setSolutionAssets(data.assets || []);
+    } catch {
+      // Mission Control can continue if the registry is temporarily unavailable.
+    }
+  }
+
   async function loadProjects() {
     setLoadingProjects(true);
     setProjectMessage("");
@@ -3008,6 +3115,7 @@ ${paymentPrompt}
     loadKnowledge();
     loadBusinessData();
     loadProjects();
+    loadSolutionAssets();
     loadLeads();
   }, []);
 
@@ -3464,6 +3572,13 @@ ${paymentPrompt}
                     href="/solutions"
                   >
                     Mediahubink Solutions
+                  </a>
+
+                  <a
+                    className="btn btn-secondary"
+                    href="/asset-registry"
+                  >
+                    Asset Registry
                   </a>
 
                   <a
