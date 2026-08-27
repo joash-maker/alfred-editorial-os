@@ -140,6 +140,39 @@ type Interaction = {
 type VoiceMode = "natural" | "device" | "silent";
 type BedtimeMode = "normal" | "wind-down" | "stop";
 
+const dashboardColours = {
+  alfred: "#5B8CFF",
+  sales: "#43B581",
+  namibia: "#D9A441",
+  warning: "#E3A14B",
+  danger: "#E36B5D",
+  build: "#9B7CF6",
+  knowledge: "#D9A441",
+};
+
+function getLeadStageColour(stage?: string | null) {
+  switch (stage) {
+    case "contacted":
+      return "#5B8CFF";
+    case "discovery":
+      return "#62A6FF";
+    case "demo-interest":
+      return "#9B7CF6";
+    case "proposal-sent":
+      return "#D9A441";
+    case "negotiation":
+      return "#E58B4A";
+    case "relationship-building":
+      return "#6FA3D8";
+    case "won":
+      return "#43B581";
+    case "lost":
+      return "#E36B5D";
+    default:
+      return "#9A9A9A";
+  }
+}
+
 type Mode =
   | "general"
   | "creative-desk"
@@ -2832,7 +2865,15 @@ ${paymentPrompt}
             </div>
           </div>
 
-          <div className="nav-pill">Mission Control V3</div>
+          <div
+            className="nav-pill"
+            style={{
+              borderColor: "rgba(91,140,255,0.42)",
+              color: dashboardColours.alfred,
+            }}
+          >
+            Mission Control V3
+          </div>
         </nav>
 
         <section
@@ -2857,10 +2898,36 @@ ${paymentPrompt}
               className="mode"
               style={{
                 marginTop: "18px",
-                border: "1px solid rgba(255,255,255,0.18)",
+                border: `1px solid ${
+                  getBedtimeMode(
+                    voiceClock.hour,
+                    voiceClock.minute
+                  ) === "stop"
+                    ? "rgba(227,107,93,0.58)"
+                    : "rgba(227,161,75,0.58)"
+                }`,
+                background:
+                  getBedtimeMode(
+                    voiceClock.hour,
+                    voiceClock.minute
+                  ) === "stop"
+                    ? "rgba(227,107,93,0.07)"
+                    : "rgba(227,161,75,0.07)",
               }}
             >
-              <strong>Alfred bedtime reminder</strong>
+              <strong
+                style={{
+                  color:
+                    getBedtimeMode(
+                      voiceClock.hour,
+                      voiceClock.minute
+                    ) === "stop"
+                      ? dashboardColours.danger
+                      : dashboardColours.warning,
+                }}
+              >
+                Alfred bedtime reminder
+              </strong>
               <span>
                 {getBedtimeReminder(
                   getBedtimeMode(voiceClock.hour, voiceClock.minute)
@@ -2893,6 +2960,14 @@ ${paymentPrompt}
                 userSelect: "none",
                 WebkitUserSelect: "none",
                 transform: voiceIsListening ? "scale(0.98)" : "none",
+                background: voiceIsListening
+                  ? "#6D98FF"
+                  : dashboardColours.alfred,
+                borderColor: dashboardColours.alfred,
+                color: "#07101F",
+                boxShadow: voiceIsListening
+                  ? "0 0 0 4px rgba(91,140,255,0.16)"
+                  : "0 0 0 1px rgba(91,140,255,0.08)",
               }}
             >
               {voiceIsListening
@@ -2963,6 +3038,15 @@ ${paymentPrompt}
                 voiceMode === "natural" ? "btn" : "btn btn-secondary"
               }
               onClick={() => chooseVoiceMode("natural")}
+              style={
+                voiceMode === "natural"
+                  ? {
+                      background: dashboardColours.alfred,
+                      borderColor: dashboardColours.alfred,
+                      color: "#07101F",
+                    }
+                  : undefined
+              }
             >
               Alfred Natural
             </button>
@@ -3004,13 +3088,27 @@ ${paymentPrompt}
           </div>
 
           <div className="mode-grid" style={{ marginTop: "16px" }}>
-            <div className="mode">
-              <strong>Voice status</strong>
+            <div
+              className="mode"
+              style={{
+                borderTop: `2px solid ${dashboardColours.alfred}`,
+              }}
+            >
+              <strong style={{ color: dashboardColours.alfred }}>
+                Voice status
+              </strong>
               <span>{voiceStatus}</span>
             </div>
 
-            <div className="mode">
-              <strong>CRM voice context</strong>
+            <div
+              className="mode"
+              style={{
+                borderTop: `2px solid ${dashboardColours.sales}`,
+              }}
+            >
+              <strong style={{ color: dashboardColours.sales }}>
+                CRM voice context
+              </strong>
               <span>{voiceContextMessage}</span>
             </div>
 
@@ -3024,8 +3122,16 @@ ${paymentPrompt}
           </div>
 
           {voiceReply && (
-            <div className="mode" style={{ marginTop: "18px" }}>
-              <strong>Alfred says:</strong>
+            <div
+              className="mode"
+              style={{
+                marginTop: "18px",
+                borderLeft: `3px solid ${dashboardColours.alfred}`,
+              }}
+            >
+              <strong style={{ color: dashboardColours.alfred }}>
+                Alfred says:
+              </strong>
               <div className="markdown-output">
                 <ReactMarkdown>{voiceReply}</ReactMarkdown>
               </div>
@@ -3033,7 +3139,10 @@ ${paymentPrompt}
           )}
         </section>
 
-        <section className="hero">
+        <section
+          className="hero"
+          style={{ marginTop: "18px" }}
+        >
           <div className="card">
             <div className="kicker">
               Mission Control Workspaces
@@ -3042,9 +3151,9 @@ ${paymentPrompt}
             <h2
               style={{
                 margin: "10px 0 12px",
-                fontSize: "clamp(34px, 6vw, 58px)",
-                lineHeight: 1.02,
-                letterSpacing: "-0.035em",
+                fontSize: "clamp(30px, 4.8vw, 48px)",
+                lineHeight: 1.04,
+                letterSpacing: "-0.03em",
               }}
             >
               Move the work forward.
@@ -3067,8 +3176,15 @@ ${paymentPrompt}
                 marginTop: "24px",
               }}
             >
-              <div className="mode">
-                <strong>Operate</strong>
+              <div
+                className="mode"
+                style={{
+                  borderTop: `2px solid ${dashboardColours.alfred}`,
+                }}
+              >
+                <strong style={{ color: dashboardColours.alfred }}>
+                  Operate
+                </strong>
                 <span>
                   Run the day, review priorities and make decisions.
                 </span>
@@ -3107,8 +3223,15 @@ ${paymentPrompt}
                 </div>
               </div>
 
-              <div className="mode">
-                <strong>Sell</strong>
+              <div
+                className="mode"
+                style={{
+                  borderTop: `2px solid ${dashboardColours.sales}`,
+                }}
+              >
+                <strong style={{ color: dashboardColours.sales }}>
+                  Sell
+                </strong>
                 <span>
                   Advance live opportunities and commercial conversations.
                 </span>
@@ -3161,8 +3284,15 @@ ${paymentPrompt}
                 </div>
               </div>
 
-              <div className="mode">
-                <strong>Build & Think</strong>
+              <div
+                className="mode"
+                style={{
+                  borderTop: `2px solid ${dashboardColours.build}`,
+                }}
+              >
+                <strong style={{ color: dashboardColours.build }}>
+                  Build & Think
+                </strong>
                 <span>
                   Create, capture signals and develop useful proof assets.
                 </span>
@@ -3201,8 +3331,15 @@ ${paymentPrompt}
                 </div>
               </div>
 
-              <div className="mode">
-                <strong>Knowledge</strong>
+              <div
+                className="mode"
+                style={{
+                  borderTop: `2px solid ${dashboardColours.knowledge}`,
+                }}
+              >
+                <strong style={{ color: dashboardColours.knowledge }}>
+                  Knowledge
+                </strong>
                 <span>
                   Use Alfred's operating knowledge, memory and reference tools.
                 </span>
@@ -3710,9 +3847,14 @@ ${paymentPrompt}
               <p>Track prospects, demo interest and follow-up conversations.</p>
             </div>
 
-            <div className="mini-card">
+            <div
+              className="mini-card"
+              style={{
+                borderTop: `2px solid ${dashboardColours.sales}`,
+              }}
+            >
               <h3>Potential MRR</h3>
-              <p>
+              <p style={{ color: dashboardColours.sales }}>
                 £{leads.reduce((total, lead) => total + Number(lead.monthly_value ?? lead.estimated_value ?? 0), 0).toLocaleString("en-GB")}
               </p>
             </div>
@@ -3758,7 +3900,19 @@ ${paymentPrompt}
                   <span>Solution: {lead.solution || "Not decided"}</span>
                   <span>Monthly value: £{Number(lead.monthly_value ?? lead.estimated_value ?? 0).toLocaleString("en-GB")}</span>
                   <span>Source: {lead.source || "Not added"}</span>
-                  <span>Region: {lead.region || "Not added"}</span>
+                  <span>
+                    Region:{" "}
+                    <span
+                      style={{
+                        color:
+                          lead.region === "Namibia"
+                            ? dashboardColours.namibia
+                            : undefined,
+                      }}
+                    >
+                      {lead.region || "Not added"}
+                    </span>
+                  </span>
 
                   <label className="lead-status-label">
                     Status
@@ -3768,6 +3922,14 @@ ${paymentPrompt}
                       onChange={(e) =>
                         updateLeadStage(lead, e.target.value)
                       }
+                      style={{
+                        borderColor: getLeadStageColour(
+                          lead.stage
+                        ),
+                        color: getLeadStageColour(
+                          lead.stage
+                        ),
+                      }}
                     >
                       <option value="new">New</option>
                       <option value="discovery">Discovery</option>
