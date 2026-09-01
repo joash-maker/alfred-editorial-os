@@ -170,8 +170,12 @@ const dashboardColours = {
 
 function getLeadStageColour(stage?: string | null) {
   switch (stage) {
+    case "research-complete":
+      return "#8B8B8B";
     case "contacted":
       return "#5B8CFF";
+    case "qualified":
+      return "#43B581";
     case "discovery":
       return "#62A6FF";
     case "demo-interest":
@@ -182,6 +186,8 @@ function getLeadStageColour(stage?: string | null) {
       return "#E58B4A";
     case "relationship-building":
       return "#6FA3D8";
+    case "nurture":
+      return "#D9A441";
     case "won":
       return "#43B581";
     case "lost":
@@ -1451,7 +1457,12 @@ export default function HomePage() {
       );
 
     const asksAboutAssets =
-      /\b(demo|demos|project|projects|proof asset|proof assets|solution|solutions|product|products|build|website|site)\b/i.test(
+      /\b(demo|demos|project|projects|proof asset|proof assets|asset|assets|solution|solutions|product|products|build|built|website|site)\b/i.test(
+        question
+      );
+
+    const asksForAssetRecommendation =
+      /\b(show|recommend|recommendation|present|demonstrate|demonstration|which (?:asset|demo|product|solution)|what (?:asset|demo|product|solution)|what should i show|what do i have|what have i built)\b/i.test(
         question
       );
 
@@ -1678,58 +1689,258 @@ Recent: ${history}`;
           "No demos loaded."
         : "Not required for this request.";
 
-    const relevantAssets =
+    const assetStopWords = new Set([
+      "what",
+      "which",
+      "should",
+      "could",
+      "would",
+      "show",
+      "recommend",
+      "present",
+      "demonstrate",
+      "company",
+      "business",
+      "practice",
+      "prospect",
+      "client",
+      "customer",
+      "their",
+      "with",
+      "from",
+      "that",
+      "this",
+      "have",
+      "built",
+      "asset",
+      "assets",
+      "demo",
+      "demos",
+      "product",
+      "products",
+      "solution",
+      "solutions",
+    ]);
+
+    const assetQueryTerms = q
+      .split(/[^a-z0-9]+/)
+      .filter(
+        (term) =>
+          term.length >= 4 &&
+          !assetStopWords.has(term)
+      );
+
+    const tradeTerms = new Set([
+      "plumbing",
+      "plumber",
+      "heating",
+      "boiler",
+      "electrical",
+      "electrician",
+      "roofing",
+      "roofer",
+      "drainage",
+      "hvac",
+      "builder",
+      "builders",
+      "locksmith",
+      "glazing",
+      "pest",
+      "landscaping",
+      "cleaning",
+      "solar",
+      "bathroom",
+      "kitchen",
+      "joinery",
+      "trade",
+      "trades",
+    ]);
+
+    const asksAboutTrade =
+      assetQueryTerms.some((term) =>
+        tradeTerms.has(term)
+      );
+
+    const scoredAssets =
       solutionAssets
         .map((asset) => {
+          const name = asset.name.toLowerCase();
+          const family = (asset.family || "").toLowerCase();
+          const markets = (asset.markets || []).map((value) =>
+            value.toLowerCase()
+          );
+          const sectors = (asset.sectors || []).map((value) =>
+            value.toLowerCase()
+          );
+          const useCases = (asset.use_cases || []).map((value) =>
+            value.toLowerCase()
+          );
+          const description = (asset.description || "").toLowerCase();
+          const bestUsedFor = (asset.best_used_for || "").toLowerCase();
+
           const haystack = [
-            asset.name,
-            asset.family,
+            name,
+            family,
             asset.asset_type,
             asset.commercial_status,
-            ...(asset.markets || []),
-            ...(asset.sectors || []),
-            ...(asset.use_cases || []),
-            asset.description,
-            asset.best_used_for,
+            ...markets,
+            ...sectors,
+            ...useCases,
+            description,
+            bestUsedFor,
           ]
             .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
+            .join(" ");
 
           let score = 0;
 
-          const nameTerms = asset.name
-            .toLowerCase()
+          const nameTerms = name
             .split(/[^a-z0-9]+/)
             .filter((part) => part.length >= 4);
 
-          if (nameTerms.some((term) => q.includes(term))) {
-            score += 1000;
+          if (
+            nameTerms.some((term) =>
+              q.includes(term)
+            )
+          ) {
+            score += 1200;
+          }
+
+          for (const sector of sectors) {
+            if (
+              sector.length >= 4 &&
+              q.includes(sector)
+            ) {
+              score += 900;
+            }
+          }
+
+          for (const term of assetQueryTerms) {
+            if (
+              sectors.some((sector) =>
+                sector.includes(term)
+              )
+            ) {
+              score += 320;
+            }
+
+            if (
+              useCases.some((useCase) =>
+                useCase.includes(term)
+              )
+            ) {
+              score += 180;
+            }
+
+            if (
+              description.includes(term) ||
+              bestUsedFor.includes(term)
+            ) {
+              score += 120;
+            }
+
+            if (family.includes(term)) {
+              score += 80;
+            }
+          }
+
+          if (
+            asksAboutTrade &&
+            sectors.some((sector) =>
+              sector.includes(
+                "trades & home services"
+              )
+            )
+          ) {
+            score += 850;
           }
 
           if (
             asksAboutNamibia &&
-            (asset.markets || []).some(
-              (market) => market.toLowerCase() === "namibia"
+            markets.some(
+              (market) =>
+                market === "namibia"
             )
           ) {
             score += 500;
           }
 
-          if (asksAboutCommercialOffer && haystack.includes("fredi")) {
+          if (
+            asksAboutCommercialOffer &&
+            haystack.includes("fredi")
+          ) {
             score += 350;
           }
 
-          if (asksAboutAssets) {
-            score += 120;
+          if (
+            asksAboutAssets ||
+            asksForAssetRecommendation
+          ) {
+            if (
+              asset.commercial_status ===
+              "active"
+            ) {
+              score += 35;
+            }
           }
 
           return { asset, score };
         })
-        .filter((item) => item.score > 0 || asksAboutAssets)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 6)
-        .map((item) => item.asset);
+        .filter((item) => item.score > 0)
+        .sort(
+          (a, b) =>
+            b.score - a.score
+        );
+
+    const primaryAsset =
+      scoredAssets[0]?.asset || null;
+
+    const relatedNames = new Set(
+      (
+        primaryAsset?.related_products ||
+        []
+      ).map((name) =>
+        name.toLowerCase()
+      )
+    );
+
+    const supportingAssets =
+      primaryAsset
+        ? solutionAssets
+            .filter(
+              (asset) =>
+                asset.id !==
+                  primaryAsset.id &&
+                relatedNames.has(
+                  asset.name.toLowerCase()
+                )
+            )
+            .slice(0, 2)
+        : [];
+
+    const relevantAssets = [
+      ...(primaryAsset
+        ? [primaryAsset]
+        : []),
+      ...supportingAssets,
+      ...scoredAssets
+        .map((item) => item.asset)
+        .filter(
+          (asset) =>
+            asset.id !==
+              primaryAsset?.id &&
+            !supportingAssets.some(
+              (supporting) =>
+                supporting.id ===
+                asset.id
+            )
+        ),
+    ].slice(
+      0,
+      asksForAssetRecommendation
+        ? 3
+        : 6
+    );
 
     const assetContext =
       relevantAssets.length > 0
@@ -1749,6 +1960,7 @@ Recent: ${history}`;
           : asksAboutFollowUps
             ? "crm-follow-up"
             : asksAboutAssets ||
+                asksForAssetRecommendation ||
                 asksAboutCommercialOffer
               ? "commercial-assets"
               : "fast-priority";
@@ -1807,7 +2019,9 @@ FAST OPERATING RULES
 - Give one clear priority when asked what to do next.
 - If a named company appears, focus on that company rather than reciting the wider pipeline.
 - If relevant registered assets are present, use their exact names in both the spoken and written answer.
-- For asset recommendations, say which asset to lead with and why.
+- When Joash asks what to show, recommend, present or demonstrate, treat that as an asset-selection request even if he does not use the words demo, asset, product or solution.
+- For asset recommendations, say which asset to lead with and why, then name up to two supporting registered assets when useful.
+- Use Related Products from the registry as supporting recommendations when they strengthen the primary asset.
 - If CRM interaction history is not loaded, say so rather than guessing.
 - Keep homepage voice answers fast and decisive.
 - For deep analysis, lengthy drafting or CRM changes, direct Joash to the relevant workspace or the full Alfred Command Centre at /alfred.
@@ -4058,14 +4272,71 @@ ${paymentPrompt}
             <input className="input-box" style={{ minHeight: "52px" }} value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} placeholder="Phone" />
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadIndustry} onChange={(e) => setLeadIndustry(e.target.value)}>
-              <option value="">Select industry</option>
-              <option value="Trades">Trades</option>
-              <option value="Dental">Dental</option>
-              <option value="Estate Agents">Estate Agents</option>
-              <option value="Schools">Schools</option>
-              <option value="Serviced Offices">Serviced Offices</option>
-              <option value="Veterinary">Veterinary</option>
-              <option value="SADC">SADC</option>
+              <option value="">Select industry / sector</option>
+
+              <optgroup label="UK Core Markets">
+                <option value="Trades">Trades</option>
+                <option value="Plumbing & Heating">Plumbing & Heating</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Roofing">Roofing</option>
+                <option value="Drainage">Drainage</option>
+                <option value="HVAC / Air Conditioning">HVAC / Air Conditioning</option>
+                <option value="Property Maintenance">Property Maintenance</option>
+
+                <option value="Dental">Dental</option>
+                <option value="Private Healthcare">Private Healthcare</option>
+                <option value="Physiotherapy">Physiotherapy</option>
+                <option value="Aesthetics">Aesthetics</option>
+                <option value="Veterinary">Veterinary</option>
+
+                <option value="Care Services">Care Services</option>
+                <option value="Domiciliary Care / Home Care">Domiciliary Care / Home Care</option>
+                <option value="Care Home">Care Home</option>
+                <option value="Supported Living">Supported Living</option>
+                <option value="Private Nursing / Complex Care">Private Nursing / Complex Care</option>
+
+                <option value="Estate Agents">Estate Agents</option>
+                <option value="Letting Agents">Letting Agents</option>
+                <option value="Property Management">Property Management</option>
+                <option value="Serviced Offices">Serviced Offices</option>
+                <option value="Coworking / Business Centres">Coworking / Business Centres</option>
+
+                <option value="Automotive">Automotive</option>
+                <option value="Independent Garage / MOT">Independent Garage / MOT</option>
+                <option value="Vehicle Recovery">Vehicle Recovery</option>
+
+                <option value="Fitness & Wellness">Fitness & Wellness</option>
+                <option value="Gym / Fitness Studio">Gym / Fitness Studio</option>
+
+                <option value="Transport & Logistics">Transport & Logistics</option>
+                <option value="Courier / Same-day">Courier / Same-day</option>
+                <option value="Haulage / Fleet">Haulage / Fleet</option>
+                <option value="Warehousing / Distribution">Warehousing / Distribution</option>
+
+                <option value="Professional Services">Professional Services</option>
+                <option value="Accountancy">Accountancy</option>
+                <option value="Legal / Conveyancing">Legal / Conveyancing</option>
+                <option value="Recruitment">Recruitment</option>
+
+                <option value="Schools">Schools</option>
+                <option value="Education / Training">Education / Training</option>
+
+                <option value="Hospitality & Tourism">Hospitality & Tourism</option>
+                <option value="Faith & Nonprofit">Faith & Nonprofit</option>
+              </optgroup>
+
+              <optgroup label="Namibia & Market Entry">
+                <option value="SME & Entrepreneurship">SME & Entrepreneurship</option>
+                <option value="Banking, Finance & Investment">Banking, Finance & Investment</option>
+                <option value="Government & Public Sector">Government & Public Sector</option>
+                <option value="Education, Youth & Skills">Education, Youth & Skills</option>
+                <option value="Tourism & Hospitality">Tourism & Hospitality</option>
+                <option value="Agriculture & Agribusiness">Agriculture & Agribusiness</option>
+                <option value="Property & Construction">Property & Construction</option>
+                <option value="NGO / Development Organisation">NGO / Development Organisation</option>
+                <option value="Chamber / Industry Body">Chamber / Industry Body</option>
+              </optgroup>
+
               <option value="Other">Other</option>
             </select>
 
@@ -4073,26 +4344,50 @@ ${paymentPrompt}
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadSolution} onChange={(e) => setLeadSolution(e.target.value)}>
               <option value="Not decided">Not decided</option>
-              <option value="Fredi Capture">Fredi Capture</option>
-              <option value="Fredi Capture+">Fredi Capture+</option>
-              <option value="Grid Gym">Grid Gym</option>
-              <option value="Kaya">Kaya</option>
-              <option value="RunSheet OS">RunSheet OS</option>
-              <option value="Opportunity Blueprint">Opportunity Blueprint</option>
-              <option value="Emergency Build">Emergency Build</option>
-              <option value="Fredi Enterprise">Fredi Enterprise</option>
+
+              <optgroup label="Commercial Offers">
+                <option value="Fredi Capture">Fredi Capture</option>
+                <option value="Fredi Capture+">Fredi Capture+</option>
+                <option value="Fredi Enterprise">Fredi Enterprise</option>
+                <option value="Missed Enquiry Revenue Audit">Missed Enquiry Revenue Audit</option>
+                <option value="AI Enquiry Blueprint">AI Enquiry Blueprint</option>
+                <option value="Foundation Pilot">Foundation Pilot</option>
+                <option value="Custom AI Solution">Custom AI Solution</option>
+                <option value="Consulting / Advisory">Consulting / Advisory</option>
+              </optgroup>
+
+              {solutionAssets.length > 0 && (
+                <optgroup label="Registered Products & Proof Assets">
+                  {solutionAssets.map((asset) => (
+                    <option key={asset.id} value={asset.name}>
+                      {asset.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+
+              <optgroup label="Legacy / Specialist">
+                <option value="Grid Gym">Grid Gym</option>
+                <option value="Kaya">Kaya</option>
+                <option value="RunSheet OS">RunSheet OS</option>
+                <option value="Opportunity Blueprint">Opportunity Blueprint</option>
+                <option value="Emergency Build">Emergency Build</option>
+              </optgroup>
             </select>
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadStage} onChange={(e) => setLeadStage(e.target.value)}>
               <option value="new">New</option>
+              <option value="research-complete">Research Complete</option>
               <option value="contacted">Contacted</option>
+              <option value="qualified">Qualified</option>
               <option value="discovery">Discovery</option>
               <option value="demo-interest">Demo Interest</option>
               <option value="proposal-sent">Proposal Sent</option>
               <option value="negotiation">Negotiation</option>
+              <option value="relationship-building">Relationship Building</option>
+              <option value="nurture">Nurture</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
-              <option value="relationship-building">Relationship Building</option>
             </select>
 
             <input className="input-box" style={{ minHeight: "52px" }} type="number" min="0" value={leadMonthlyValue} onChange={(e) => setLeadMonthlyValue(e.target.value)} placeholder="Monthly Value (£), e.g. 397, 697, 4000" />
@@ -4101,25 +4396,77 @@ ${paymentPrompt}
             <input className="input-box" style={{ minHeight: "52px" }} type="number" min="0" max="40" value={leadScore} onChange={(e) => setLeadScore(e.target.value)} placeholder="Lead Score (0-40)" />
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadSource} onChange={(e) => setLeadSource(e.target.value)}>
-              <option value="LinkedIn">LinkedIn</option>
-              <option value="Referral">Referral</option>
-              <option value="Website">Website</option>
-              <option value="Substack">Substack</option>
-              <option value="Network">Network</option>
-              <option value="Cold Outreach">Cold Outreach</option>
-              <option value="Partner">Partner</option>
+              <optgroup label="Outbound">
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Email Outreach">Email Outreach</option>
+                <option value="Cold Call">Cold Call</option>
+                <option value="Cold Outreach">Cold Outreach</option>
+                <option value="WhatsApp Outreach">WhatsApp Outreach</option>
+              </optgroup>
+
+              <optgroup label="Inbound & Marketing">
+                <option value="Website">Website</option>
+                <option value="Inbound Enquiry">Inbound Enquiry</option>
+                <option value="Google / Search">Google / Search</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Substack">Substack</option>
+                <option value="Demo / Calculator">Demo / Calculator</option>
+              </optgroup>
+
+              <optgroup label="Relationships">
+                <option value="Referral">Referral</option>
+                <option value="Warm Introduction">Warm Introduction</option>
+                <option value="Existing Relationship">Existing Relationship</option>
+                <option value="Network">Network</option>
+                <option value="Networking / Event">Networking / Event</option>
+                <option value="Partner">Partner</option>
+                <option value="Chamber / Industry Body">Chamber / Industry Body</option>
+                <option value="Government / Institutional">Government / Institutional</option>
+              </optgroup>
+
               <option value="Other">Other</option>
             </select>
 
             <select className="input-box" style={{ minHeight: "52px" }} value={leadRegion} onChange={(e) => setLeadRegion(e.target.value)}>
-              <option value="United Kingdom">United Kingdom</option>
-              <option value="SADC">SADC</option>
-              <option value="Namibia">Namibia</option>
-              <option value="Zambia">Zambia</option>
-              <option value="South Africa">South Africa</option>
-              <option value="DRC">DRC</option>
-              <option value="Zimbabwe">Zimbabwe</option>
-              <option value="Other">Other</option>
+              <optgroup label="United Kingdom">
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Yorkshire & Humber">Yorkshire & Humber</option>
+                <option value="North East England">North East England</option>
+                <option value="North West England">North West England</option>
+                <option value="East Midlands">East Midlands</option>
+                <option value="West Midlands">West Midlands</option>
+                <option value="East of England">East of England</option>
+                <option value="London">London</option>
+                <option value="South East England">South East England</option>
+                <option value="South West England">South West England</option>
+                <option value="Scotland">Scotland</option>
+                <option value="Wales">Wales</option>
+                <option value="Northern Ireland">Northern Ireland</option>
+              </optgroup>
+
+              <optgroup label="Southern Africa">
+                <option value="Namibia">Namibia</option>
+                <option value="South Africa">South Africa</option>
+                <option value="Zambia">Zambia</option>
+                <option value="Zimbabwe">Zimbabwe</option>
+                <option value="Botswana">Botswana</option>
+                <option value="Angola">Angola</option>
+                <option value="Mozambique">Mozambique</option>
+                <option value="Malawi">Malawi</option>
+                <option value="Eswatini">Eswatini</option>
+                <option value="Lesotho">Lesotho</option>
+                <option value="DRC">DRC</option>
+                <option value="SADC">SADC / Regional</option>
+              </optgroup>
+
+              <optgroup label="Other Markets">
+                <option value="Other Africa">Other Africa</option>
+                <option value="Europe">Europe</option>
+                <option value="North America">North America</option>
+                <option value="International">International</option>
+                <option value="Other">Other</option>
+              </optgroup>
             </select>
 
             <textarea className="input-box" value={leadNotes} onChange={(e) => setLeadNotes(e.target.value)} placeholder="Notes" />
