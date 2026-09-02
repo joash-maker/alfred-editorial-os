@@ -911,6 +911,7 @@ export default function HomePage() {
   const [knowledgeMessage, setKnowledgeMessage] = useState("");
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [totalLeadCount, setTotalLeadCount] = useState(0);
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadMessage, setLeadMessage] = useState("");
   const [savingLead, setSavingLead] = useState(false);
@@ -3003,13 +3004,24 @@ ${paymentPrompt}
       const data = await response.json();
 
       if (!response.ok) {
+        setTotalLeadCount(0);
         setLeadMessage(data.error || "Could not load leads.");
         return;
       }
 
       const loadedLeads = data.leads || [];
+      const databaseTotal =
+        typeof data.total === "number"
+          ? data.total
+          : loadedLeads.length;
+
       setLeads(loadedLeads);
-      setLeadMessage("Leads loaded.");
+      setTotalLeadCount(databaseTotal);
+      setLeadMessage(
+        loadedLeads.length === databaseTotal
+          ? `${databaseTotal} leads loaded from CRM.`
+          : `${loadedLeads.length} of ${databaseTotal} leads loaded from CRM.`
+      );
       void loadVoiceInteractions(loadedLeads);
     } catch {
       setLeadMessage("Something went wrong loading leads.");
@@ -4497,8 +4509,8 @@ ${paymentPrompt}
 
           <div className="section" style={{ marginTop: "18px" }}>
             <div className="mini-card">
-              <h3>Leads Loaded</h3>
-              <p>{leads.length}</p>
+              <h3>Total CRM Leads</h3>
+              <p>{totalLeadCount}</p>
             </div>
 
             <div className="mini-card">
